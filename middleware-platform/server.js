@@ -272,6 +272,10 @@ app.post('/voice/appointments/checkout', async (req, res) => {
 
     // Build a minimal checkout record tied to the appointment
     const checkoutId = require('uuid').v4();
+    
+    // Ensure customer_phone is provided (required field)
+    const customerPhone = args.customer_phone || args.patient_phone || '0000000000';
+    
     const checkout = {
       id: checkoutId,
       merchant_id: args.merchant_id || 'd10794ff-ca11-4e6f-93e9-560162b4f884',
@@ -279,7 +283,7 @@ app.post('/voice/appointments/checkout', async (req, res) => {
       product_name: args.appointment_type ? `Appointment - ${args.appointment_type}` : 'Appointment',
       quantity: 1,
       amount: amount,
-      customer_phone: args.customer_phone || null,
+      customer_phone: customerPhone, // Required field - cannot be null
       customer_name: args.customer_name || args.patient_name || 'Patient',
       customer_email: args.customer_email || args.patient_email || null,
       status: 'pending'

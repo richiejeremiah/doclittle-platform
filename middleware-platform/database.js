@@ -599,6 +599,9 @@ module.exports = {
   // VOICE CHECKOUTS
   // ============================================
   createVoiceCheckout: (checkout) => {
+    // Ensure customer_phone is never null (required field)
+    const customerPhone = checkout.customer_phone || '0000000000';
+    
     return db.prepare(`
       INSERT INTO voice_checkouts 
       (id, merchant_id, product_id, product_name, quantity, amount, 
@@ -611,7 +614,7 @@ module.exports = {
       checkout.product_name,
       checkout.quantity || 1,
       checkout.amount,
-      checkout.customer_phone,
+      customerPhone,
       checkout.customer_name || null,
       checkout.customer_email || null,
       checkout.status || 'pending'

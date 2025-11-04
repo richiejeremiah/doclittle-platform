@@ -51,8 +51,10 @@ class PaymentOrchestrator {
 
             console.log('💰 Totals:', totals);
 
-            // Normalize phone number
-            const normalizedPhone = SMSService.formatPhoneNumber(paymentRequest.customer.phone);
+            // Normalize phone number (ensure it's never null)
+            const normalizedPhone = paymentRequest.customer.phone 
+                ? SMSService.formatPhoneNumber(paymentRequest.customer.phone)
+                : '0000000000';
 
             // Create checkout record
             const checkoutId = uuidv4();
