@@ -33,8 +33,8 @@
 
   // Check for production domain (doclittle.site)
   if (hostname === 'doclittle.site' || hostname.includes('doclittle.site')) {
-    // For production, check localStorage first (set after Railway deployment)
-    const prodApi = localStorage.getItem('api_base') || 'https://your-railway-app.railway.app';
+    // For production, use Railway backend
+    const prodApi = localStorage.getItem('api_base') || 'https://web-production-a783d.up.railway.app';
     window.API_BASE = prodApi;
     console.log('🌐 API Base URL (production):', window.API_BASE);
     return;
@@ -47,8 +47,8 @@
       console.warn('⚠️  Detected external access. Please set API URL via ?api=YOUR_API_URL or localStorage');
       window.API_BASE = 'http://localhost:4000'; // Fallback
     } else if (hostname.includes('netlify.app')) {
-      // Netlify - use Railway URL (update this with your actual Railway URL)
-      window.API_BASE = 'https://your-railway-app.railway.app';
+      // Netlify - use Railway URL
+      window.API_BASE = 'https://web-production-a783d.up.railway.app';
     } else {
       // Other custom domain - assume API is on same domain, port 4000
       const protocol = window.location.protocol;
