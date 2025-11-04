@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Agent - doclittle- AI Voice Receptionist</title>
+    <link rel="stylesheet" href="../assets/css/global.css">
+    <script src="../assets/js/config.js"></script>
+    <style>
+        :root {
+            --primary: #0891b2;
+            --primary-dark: #0e7490;
+            --primary-light: #06b6d4;
+        }
+
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .sidebar-logo {
+            font-size: 32px;
+            line-height: 1;
+            letter-spacing: -3px;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-logo .doc {
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+            font-weight: 400;
+        }
+
+        .sidebar-logo .little {
+            font-family: 'Verdana', Geneva, sans-serif;
+            font-weight: 700;
+            font-style: normal;
+        }
+
+        .sidebar-subtitle {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-top: 4px;
+        }
+
+        .sidebar-nav {
+            padding: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--gray-700);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+        }
+
+        .nav-item:hover {
+            background: var(--gray-50);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--gray-200);
+            position: absolute;
+            bottom: 0;
+            width: 260px;
+            background: white;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            background: var(--gray-50);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--gray-900);
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            color: var(--gray-500);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            padding: 32px;
+        }
+
+        .page-header {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .page-title {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            color: var(--gray-600);
+            font-size: 14px;
+        }
+
+        /* Agent Control Panel */
+        .agent-control-panel {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 32px;
+            color: white;
+            box-shadow: var(--shadow-xl);
+        }
+
+        .agent-status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .agent-status-info h2 {
+            color: white;
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .agent-phone-display {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+        }
+
+        .agent-status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 16px;
+        }
+
+        .status-dot-large {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #48bb78;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .status-dot-large.offline {
+            background: #cbd5e0;
+            animation: none;
+        }
+
+        .toggle-switch-large {
+            position: relative;
+            width: 80px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 40px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch-large.active {
+            background: #48bb78;
+        }
+
+        .toggle-slider-large {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: 32px;
+            height: 32px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-switch-large.active .toggle-slider-large {
+            transform: translateX(40px);
+        }
+
+        .agent-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .agent-action-btn {
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--primary);
+            padding: 20px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .agent-action-btn:hover {
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Performance Stats */
+        .performance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .performance-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .performance-card h3 {
+            font-size: 14px;
+            color: var(--gray-600);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .performance-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .performance-change {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .performance-change.positive {
+            color: var(--success);
+        }
+
+        .performance-change.negative {
+            color: var(--danger);
+        }
+
+        /* Business Hours */
+        .business-hours-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .hours-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .hours-row:last-child {
+            border-bottom: none;
+        }
+
+        .day-name {
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .hours-time {
+            color: var(--gray-600);
+        }
+
+        /* Call Log */
+        .call-log-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .call-log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .call-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: var(--gray-50);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+
+        .call-item:hover {
+            background: var(--gray-100);
+        }
+
+        .call-info {
+            flex: 1;
+        }
+
+        .call-time {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-bottom: 4px;
+        }
+
+        .call-customer {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .call-duration {
+            font-size: 13px;
+            color: var(--gray-600);
+        }
+
+        .call-result {
+            text-align: right;
+        }
+
+        .call-result-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .call-result-badge.success {
+            background: var(--success-light);
+            color: var(--success);
+        }
+
+        .call-result-badge.failed {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .call-amount {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-top: 4px;
+        }
+
+        /* Cost Tracking */
+        .cost-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .cost-breakdown {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .cost-item {
+            padding: 16px;
+            background: var(--gray-50);
+            border-radius: 8px;
+        }
+
+        .cost-label {
+            font-size: 13px;
+            color: var(--gray-600);
+            margin-bottom: 8px;
+        }
+
+        .cost-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+                height: auto;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .agent-status-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 20px;
+            }
+
+            .performance-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .cost-breakdown {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <span class="doc">Doc</span><span class="little">Little</span><span style="font-weight:700;">.</span>
+                </div>
+                <div class="sidebar-subtitle">AI Voice Receptionist</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="patients.html" class="nav-item">
+                    <span class="nav-icon">👥</span>
+                    <span>Clients</span>
+                </a>
+                <a href="calendar.html" class="nav-item">
+                    <span class="nav-icon">📅</span>
+                    <span>Calendar</span>
+                </a>
+                <a href="records.html" class="nav-item">
+                    <span class="nav-icon">📁</span>
+                    <span>Records</span>
+                </a>
+                <a href="orders.html" class="nav-item">
+                    <span class="nav-icon">💳</span>
+                    <span>Billing</span>
+                </a>
+                <a href="agent.html" class="nav-item active">
+                    <span class="nav-icon">🎙️</span>
+                    <span>Voice Agent</span>
+                </a>
+                <a href="treatments.html" class="nav-item">
+                    <span class="nav-icon">🏷️</span>
+                    <span>Treatments</span>
+                </a>
+                <a href="settings.html" class="nav-item">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Settings</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">VC</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">Business Owner</div>
+                        <div class="user-role">Owner</div>
+                    </div>
+                    <button class="logout-btn" onclick="logout()" title="Logout">
+                        🚪
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">AI Voice Receptionist</h1>
+                <p class="page-subtitle">Manage your AI-powered voice receptionist and appointment booking</p>
+            </div>
+
+            <!-- Agent Control Panel -->
+            <div class="agent-control-panel">
+                <div class="agent-status-header">
+                    <div class="agent-status-info">
+                        <h2>🎙️ AI Voice Receptionist</h2>
+                        <div class="agent-phone-display" id="agentPhone">(585)620-2445</div>
+                        <div class="agent-status-indicator">
+                            <span class="status-dot-large" id="statusDot"></span>
+                            <span id="statusText">Online & Taking Calls</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="toggle-switch-large active" id="agentToggle" onclick="toggleAgent()">
+                            <div class="toggle-slider-large"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="agent-actions-grid">
+                    <button class="agent-action-btn" onclick="testCall()">
+                        <span style="font-size: 24px;">📞</span>
+                        <span>Test Call</span>
+                    </button>
+                    <button class="agent-action-btn" onclick="editGreeting()">
+                        <span style="font-size: 24px;">🎤</span>
+                        <span>Edit Greeting</span>
+                    </button>
+                    <button class="agent-action-btn" onclick="editHours()">
+                        <span style="font-size: 24px;">⏰</span>
+                        <span>Business Hours</span>
+                    </button>
+                    <button class="agent-action-btn" onclick="viewTranscripts()">
+                        <span style="font-size: 24px;">📝</span>
+                        <span>Call Transcripts</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Performance Stats -->
+            <div class="performance-grid">
+                <div class="performance-card">
+                    <h3>📞 Total Calls (24h)</h3>
+                    <div class="performance-value" id="totalCalls">0</div>
+                    <div class="performance-change positive" id="callsChange">+0 from yesterday</div>
+                </div>
+
+                <div class="performance-card">
+                    <h3>✅ Successful Calls</h3>
+                    <div class="performance-value" id="successfulCalls">0</div>
+                    <div class="performance-change" id="successRate">0% success rate</div>
+                </div>
+
+                <div class="performance-card">
+                    <h3>💰 Sales from Calls</h3>
+                    <div class="performance-value" id="callRevenue">$0</div>
+                    <div class="performance-change positive" id="revenueChange">+$0 today</div>
+                </div>
+
+                <div class="performance-card">
+                    <h3>⚡ Conversion Rate</h3>
+                    <div class="performance-value" id="conversionRate">0%</div>
+                    <div class="performance-change" id="conversionChange">0 purchases / 0 calls</div>
+                </div>
+
+                <div class="performance-card">
+                    <h3>⏱️ Avg Call Duration</h3>
+                    <div class="performance-value" id="avgDuration">0m</div>
+                    <div class="performance-change" id="durationChange">0s avg</div>
+                </div>
+
+                <div class="performance-card">
+                    <h3>💵 Avg Order Value</h3>
+                    <div class="performance-value" id="avgOrder">$0</div>
+                    <div class="performance-change" id="orderChange">Per call purchase</div>
+                </div>
+            </div>
+
+            <!-- Business Hours -->
+            <div class="business-hours-card">
+                <div class="call-log-header">
+                    <h3>⏰ Business Hours</h3>
+                    <button class="btn btn-secondary btn-sm" onclick="editHours()">
+                        Edit Hours
+                    </button>
+                </div>
+
+                <div class="hours-row">
+                    <span class="day-name">Monday - Friday</span>
+                    <span class="hours-time">9:00 AM - 6:00 PM</span>
+                </div>
+                <div class="hours-row">
+                    <span class="day-name">Saturday</span>
+                    <span class="hours-time">10:00 AM - 4:00 PM</span>
+                </div>
+                <div class="hours-row">
+                    <span class="day-name">Sunday</span>
+                    <span class="hours-time">Closed</span>
+                </div>
+            </div>
+
+            <!-- Call Costs -->
+            <div class="cost-card">
+                <h3>💰 Call Costs</h3>
+                <div class="cost-breakdown">
+                    <div class="cost-item">
+                        <div class="cost-label">Today</div>
+                        <div class="cost-value" id="costToday">$0.00</div>
+                    </div>
+                    <div class="cost-item">
+                        <div class="cost-label">This Month</div>
+                        <div class="cost-value" id="costMonth">$0.00</div>
+                    </div>
+                    <div class="cost-item">
+                        <div class="cost-label">Avg Cost per Call</div>
+                        <div class="cost-value" id="costPerCall">$0.00</div>
+                    </div>
+                    <div class="cost-item">
+                        <div class="cost-label">ROI</div>
+                        <div class="cost-value" id="roi">0x</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Calls -->
+            <div class="call-log-card">
+                <div class="call-log-header">
+                    <h3>📞 Recent Calls</h3>
+                    <button class="btn btn-secondary btn-sm" onclick="viewAllCalls()">
+                        View All Calls
+                    </button>
+                </div>
+
+                <div id="callLogList">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📞</div>
+                        <p>No calls yet. Call history will appear here.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = window.API_BASE || 'http://localhost:4000';
+        let userData = null;
+        let agentEnabled = true;
+
+        // Check authentication
+        if (sessionStorage.getItem('authenticated') !== 'true') {
+            window.location.href = '../index.html';
+        }
+
+        userData = JSON.parse(sessionStorage.getItem('user'));
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserInfo();
+            loadAgentData();
+
+            // Refresh every 30 seconds
+            setInterval(loadAgentData, 30000);
+        });
+
+        function loadUserInfo() {
+            if (userData) {
+                document.getElementById('userName').textContent = userData.name;
+                // Logo is now static HTML, no need to update
+                const initials = userData.name.split(' ').map(n => n[0]).join('');
+                document.getElementById('userAvatar').textContent = initials;
+            }
+        }
+
+        async function loadAgentData() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/transactions?limit=100`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const transactions = data.transactions.filter(t =>
+                        t.merchant_id === userData.merchant_id && t.protocol === 'voice'
+                    );
+
+                    updatePerformanceStats(transactions);
+                    updateCallLog(transactions.slice(0, 10));
+                }
+            } catch (error) {
+                console.error('Error loading agent data:', error);
+            }
+        }
+
+        function updatePerformanceStats(transactions) {
+            // Filter today's calls
+            const today = new Date().toDateString();
+            const todayCalls = transactions.filter(t =>
+                new Date(t.created_at).toDateString() === today
+            );
+
+            const totalCalls = todayCalls.length;
+            const successfulCalls = todayCalls.filter(t => t.status === 'completed').length;
+            const revenue = todayCalls.reduce((sum, t) => sum + (t.amount || 0), 0);
+            const conversionRate = totalCalls > 0 ? ((successfulCalls / totalCalls) * 100).toFixed(1) : 0;
+            const avgOrder = successfulCalls > 0 ? revenue / successfulCalls : 0;
+
+            document.getElementById('totalCalls').textContent = totalCalls;
+            document.getElementById('successfulCalls').textContent = successfulCalls;
+            document.getElementById('callRevenue').textContent = `$${revenue.toFixed(2)}`;
+            document.getElementById('conversionRate').textContent = `${conversionRate}%`;
+            document.getElementById('avgOrder').textContent = `$${avgOrder.toFixed(2)}`;
+
+            document.getElementById('callsChange').textContent = `+${totalCalls} today`;
+            document.getElementById('successRate').textContent = `${conversionRate}% success rate`;
+            document.getElementById('revenueChange').textContent = `+$${revenue.toFixed(2)} today`;
+            document.getElementById('conversionChange').textContent = `${successfulCalls} purchases / ${totalCalls} calls`;
+            document.getElementById('avgDuration').textContent = '2m'; // Simulated
+            document.getElementById('durationChange').textContent = '34s avg';
+            document.getElementById('orderChange').textContent = 'Per call purchase';
+
+            // Calculate costs (estimated at $0.10 per minute, avg 2 min call)
+            const costPerCall = 0.20;
+            const costToday = totalCalls * costPerCall;
+
+            // Month stats (approximate)
+            const monthCalls = transactions.length;
+            const costMonth = monthCalls * costPerCall;
+            const monthRevenue = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+            const roi = costMonth > 0 ? (monthRevenue / costMonth).toFixed(1) : 0;
+
+            document.getElementById('costToday').textContent = `$${costToday.toFixed(2)}`;
+            document.getElementById('costMonth').textContent = `$${costMonth.toFixed(2)}`;
+            document.getElementById('costPerCall').textContent = `$${costPerCall.toFixed(2)}`;
+            document.getElementById('roi').textContent = `${roi}x`;
+        }
+
+        function updateCallLog(calls) {
+            const container = document.getElementById('callLogList');
+
+            if (calls.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📞</div>
+                        <p>No calls yet. Call history will appear here.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = calls.map(call => {
+                const time = new Date(call.created_at).toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit'
+                });
+
+                const isSuccess = call.status === 'completed';
+                const badgeClass = isSuccess ? 'success' : 'failed';
+                const badgeText = isSuccess ? '✅ Purchased' : '❌ No Sale';
+
+                return `
+                    <div class="call-item">
+                        <div class="call-info">
+                            <div class="call-time">${time}</div>
+                            <div class="call-customer">${call.customer_name || 'Unknown'}</div>
+                            <div class="call-duration">Duration: 2m 15s</div>
+                        </div>
+                        <div class="call-result">
+                            <span class="call-result-badge ${badgeClass}">${badgeText}</span>
+                            ${isSuccess ? `<div class="call-amount">$${(call.amount || 0).toFixed(2)}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleAgent() {
+            const toggle = document.getElementById('agentToggle');
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+
+            agentEnabled = !agentEnabled;
+
+            if (agentEnabled) {
+                toggle.classList.add('active');
+                statusDot.classList.remove('offline');
+                statusText.textContent = 'Online & Taking Calls';
+            } else {
+                toggle.classList.remove('active');
+                statusDot.classList.add('offline');
+                statusText.textContent = 'Offline - Not Taking Calls';
+            }
+
+            // In production, this would call an API to enable/disable the agent
+            alert(agentEnabled ? 'Agent enabled - Ready to take calls' : 'Agent disabled - Calls will go to voicemail');
+        }
+
+        function testCall() {
+            alert('🎙️ Test Call\n\nIn production, this would:\n\n1. Call your phone number\n2. Let you interact with the AI voice receptionist\n3. Test the full appointment booking conversation flow\n4. Show you call transcripts and client interactions\n\nFor demo purposes, you can call:\n(585) 620-2445');
+        }
+
+        function editGreeting() {
+            const newGreeting = prompt('Customize your receptionist greeting:', 'Hi, you\'ve reached doclittle- AI Voice Receptionist. How can I help you today?');
+            if (newGreeting) {
+                alert('Greeting updated!\n\nIn production, this would update the voice receptionist\'s opening message.');
+            }
+        }
+
+        function editHours() {
+            alert('⏰ Business Hours\n\nIn production, this would open a settings modal where you can:\n\n• Set hours for each day\n• Enable/disable specific days\n• Set holiday schedules\n• Configure after-hours messaging');
+        }
+
+        function viewTranscripts() {
+            alert('📝 Call Transcripts\n\nIn production, this would show:\n\n• Full conversation transcripts\n• Searchable by date/customer\n• AI-generated summaries\n• Sentiment analysis\n• Key moments tagged');
+        }
+
+        function viewAllCalls() {
+            alert('📞 All Calls\n\nIn production, this would show a detailed call history with:\n\n• All call recordings\n• Transcripts\n• Purchase outcomes\n• Customer details\n• Export to CSV');
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = '../index.html';
+        }
+    </script>
+</body>
+
+</html>

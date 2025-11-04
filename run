@@ -1,0 +1,33 @@
+#terminal 1 merchant-shop
+cd merchant-shop
+export NVM_DIR="$HOME/.nvm"
+[ -s "$(brew --prefix nvm)/nvm.sh" ] && \. "$(brew --prefix nvm)/nvm.sh"
+npm start
+
+
+#term2: middleware
+cd middleware-platform
+export NVM_DIR="$HOME/.nvm"
+[ -s "$(brew --prefix nvm)/nvm.sh" ] && \. "$(brew --prefix nvm)/nvm.sh"
+npm start
+
+
+#ngrok
+ngrok http 4000
+# Copy the https URL and update NGROK_URL in .env if it changed
+
+#Killserver: # Find what's using port 4000
+lsof -ti:4000
+
+# Kill it
+kill -9 $(lsof -ti:4000)
+
+# Now start your server
+npm start
+
+
+
+cd /Users/jeremiahrichie/agentic-commerce-platform/middleware-platform
+export NVM_DIR="$HOME/.nvm"
+[ -s "$(brew --prefix nvm)/nvm.sh" ] && \. "$(brew --prefix nvm)/nvm.sh"
+node configure-retell.js

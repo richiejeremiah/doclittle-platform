@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - doclittle- AI Voice Receptionist</title>
+    <link rel="stylesheet" href="../assets/css/global.css">
+    <script src="../assets/js/config.js"></script>
+    <style>
+        :root {
+            --primary: #0891b2;
+            --primary-dark: #0e7490;
+            --primary-light: #06b6d4;
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .sidebar-logo {
+            font-size: 32px;
+            line-height: 1;
+            letter-spacing: -3px;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-logo .doc {
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+        }
+
+        .sidebar-logo .little {
+            font-family: 'Verdana', Geneva, sans-serif;
+            font-weight: 700;
+        }
+
+        .sidebar-subtitle {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-top: 4px;
+        }
+
+        .sidebar-nav {
+            padding: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--gray-700);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+            text-decoration: none;
+        }
+
+        .nav-item:hover {
+            background: var(--gray-50);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--gray-200);
+            position: absolute;
+            bottom: 0;
+            width: 260px;
+            background: white;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            background: var(--gray-50);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--gray-900);
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            color: var(--gray-500);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            padding: 32px;
+            background: var(--gray-50);
+        }
+
+        .page-header {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .page-title {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            color: var(--gray-600);
+            font-size: 14px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            box-shadow: var(--shadow-xl);
+            transform: translateY(-4px);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .stat-title {
+            font-size: 14px;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-icon {
+            font-size: 32px;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .stat-change {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .stat-change.positive {
+            color: var(--success);
+        }
+
+        .stat-change.negative {
+            color: var(--danger);
+        }
+
+        /* Helpline Status Banner */
+        .helpline-status-banner {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 32px;
+            color: white;
+            box-shadow: var(--shadow-xl);
+        }
+
+        .helpline-status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .helpline-status-title {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .helpline-phone {
+            font-size: 20px;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+
+        .helpline-stats {
+            display: flex;
+            gap: 32px;
+            margin-top: 16px;
+        }
+
+        .helpline-stat-item {
+            flex: 1;
+        }
+
+        .helpline-stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .helpline-stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* Recent Patients */
+        .recent-patients-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .patient-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: var(--gray-50);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .patient-item:hover {
+            background: var(--gray-100);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .patient-info {
+            flex: 1;
+        }
+
+        .patient-id {
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .patient-name {
+            font-size: 16px;
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .patient-phone {
+            font-size: 13px;
+            color: var(--gray-600);
+            margin-bottom: 4px;
+        }
+
+        .patient-time {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .patient-details {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+        }
+
+        .call-duration {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-700);
+        }
+
+        .patient-status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-in-progress {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .fhir-badge {
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px;
+            color: var(--gray-600);
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        /* Referral List */
+        .referral-list-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 24px;
+        }
+
+        .referral-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+
+        .referral-item.high-priority {
+            background: #fee2e2;
+            border-left-color: #dc2626;
+        }
+
+        .referral-item:hover {
+            transform: translateX(4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .referral-info {
+            flex: 1;
+        }
+
+        .referral-patient {
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 4px;
+        }
+
+        .referral-reason {
+            font-size: 14px;
+            color: var(--gray-700);
+            margin-bottom: 4px;
+        }
+
+        .referral-priority {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .priority-high {
+            background: #dc2626;
+            color: white;
+        }
+
+        .priority-medium {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .referral-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+                height: auto;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .helpline-stats {
+                flex-direction: column;
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <span class="doc">Doc</span><span class="little">Little</span><span style="font-weight:700;">.</span>
+                </div>
+                <div class="sidebar-subtitle">AI Voice Receptionist</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item active">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="patients.html" class="nav-item">
+                    <span class="nav-icon">👥</span>
+                    <span>Clients</span>
+                </a>
+                <a href="calendar.html" class="nav-item">
+                    <span class="nav-icon">📅</span>
+                    <span>Calendar</span>
+                </a>
+                <a href="records.html" class="nav-item">
+                    <span class="nav-icon">📁</span>
+                    <span>Records</span>
+                </a>
+                <a href="orders.html" class="nav-item">
+                    <span class="nav-icon">💳</span>
+                    <span>Billing</span>
+                </a>
+                <a href="agent.html" class="nav-item">
+                    <span class="nav-icon">🎙️</span>
+                    <span>Voice Agent</span>
+                </a>
+                <a href="treatments.html" class="nav-item">
+                    <span class="nav-icon">🏷️</span>
+                    <span>Treatments</span>
+                </a>
+                <a href="settings.html" class="nav-item">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Settings</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">HP</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">Healthcare Provider</div>
+                        <div class="user-role" id="userRole">Provider</div>
+                    </div>
+                    <button class="logout-btn" onclick="logout()" title="Logout">
+                        🚪
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Patient Dashboard</h1>
+                <p class="page-subtitle">Overview of appointments and AI voice receptionist activity</p>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title"># of Calls</span>
+                        <span class="stat-icon">📞</span>
+                    </div>
+                    <div class="stat-value" id="totalCalls">0</div>
+                    <div class="stat-change" id="callsChange">Total calls received</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Priority Cases</span>
+                        <span class="stat-icon">⚠️</span>
+                    </div>
+                    <div class="stat-value" id="priorityCases">0</div>
+                    <div class="stat-change" id="priorityChange">High-risk patients</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Revenue</span>
+                        <span class="stat-icon">💰</span>
+                    </div>
+                    <div class="stat-value" id="totalRevenue">$0</div>
+                    <div class="stat-change" id="revenueChange">Orders today</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Call Costs</span>
+                        <span class="stat-icon">📊</span>
+                    </div>
+                    <div class="stat-value" id="callCosts">$0</div>
+                    <div class="stat-change" id="costsChange">Today's expenses</div>
+                </div>
+            </div>
+
+            <!-- Next Appointment Banner -->
+            <div class="helpline-status-banner" id="nextApptCard">
+                <div class="helpline-status-header">
+                    <div>
+                        <div class="helpline-status-title">📅 Next Appointment</div>
+                        <div class="helpline-phone" id="nextApptWhen">Loading…</div>
+                    </div>
+                </div>
+
+                <div class="helpline-stats">
+                    <div class="helpline-stat-item">
+                        <div class="helpline-stat-value" id="nextApptPatient">—</div>
+                        <div class="helpline-stat-label">Patient</div>
+                    </div>
+                    <div class="helpline-stat-item">
+                        <div class="helpline-stat-value" id="nextApptType">—</div>
+                        <div class="helpline-stat-label">Type</div>
+                    </div>
+                    <div class="helpline-stat-item">
+                        <div class="helpline-stat-value" id="nextApptProvider">—</div>
+                        <div class="helpline-stat-label">Provider</div>
+                    </div>
+                </div>
+
+                <div class="agent-actions" style="display: flex; gap: 12px; margin-top: 16px;">
+                    <button class="btn btn-secondary" onclick="openInCalendar()">Open Calendar</button>
+                    <button class="btn btn-primary" onclick="goCalendar()">Go to Calendar</button>
+                </div>
+            </div>
+
+            <!-- Upcoming / Recents Tabs -->
+            <div class="recent-patients-card" style="margin-top:24px;">
+                <div class="card-header" style="gap:12px; align-items:flex-end;">
+                    <div>
+                        <h2 class="card-title">Calls</h2>
+                        <div style="font-size:12px;color:var(--gray-500);">Live data from the voice agent</div>
+                    </div>
+                    <div style="margin-left:auto; display:flex; gap:8px;">
+                        <button id="tabLive" class="btn btn-secondary btn-sm" onclick="switchCallsTab('live')">Live</button>
+                        <button id="tabUpcoming" class="btn btn-secondary btn-sm" onclick="switchCallsTab('upcoming')">Upcoming</button>
+                        <button id="tabRecent" class="btn btn-secondary btn-sm" onclick="switchCallsTab('recent')">Past</button>
+                    </div>
+                </div>
+                <div id="callsTabs">
+                    <div id="liveCallsList" class="calls-panel" style="display:none;">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📡</div>
+                            <p>Loading live calls…</p>
+                        </div>
+                    </div>
+                    <div id="upcomingCallsList" class="calls-panel">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">⏱️</div>
+                            <p>Loading upcoming calls…</p>
+                        </div>
+                    </div>
+                    <div id="recentCallsList" class="calls-panel" style="display:none;">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📞</div>
+                            <p>Loading past calls…</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- (Removed individual lists; Calls tabs above now handle all views) -->
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = window.API_BASE || 'http://localhost:4000';
+        let userData = null;
+        let statsInterval = null;
+
+        // Check authentication
+        if (sessionStorage.getItem('authenticated') !== 'true') {
+            window.location.href = '../index.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load userData AFTER DOM is ready
+            userData = JSON.parse(sessionStorage.getItem('user'));
+
+            loadUserInfo();
+            loadDashboardData();
+
+            // Refresh every 30 seconds
+            statsInterval = setInterval(loadDashboardData, 30000);
+        });
+
+        function loadUserInfo() {
+            if (userData) {
+                const userNameEl = document.getElementById('userName');
+                const userRoleEl = document.getElementById('userRole');
+                const userAvatarEl = document.getElementById('userAvatar');
+
+                if (userNameEl) userNameEl.textContent = userData.name;
+                if (userRoleEl) {
+                    const roleMap = {
+                        'healthcare_provider': 'Provider',
+                        'platform_admin': 'Admin',
+                        'business_owner': 'Owner'
+                    };
+                    userRoleEl.textContent = roleMap[userData.role] || 'User';
+                }
+
+                if (userAvatarEl) {
+                    const initials = userData.name.split(' ').map(n => n[0]).join('').substring(0, 2);
+                    userAvatarEl.textContent = initials;
+                }
+            }
+        }
+
+        async function loadDashboardData() {
+            try {
+                // Load general stats
+                const statsResponse = await fetch(`${API_BASE}/api/admin/stats`);
+                const statsData = await statsResponse.json();
+
+                if (statsData.success) {
+                    updateStatsCards(statsData.stats);
+                }
+
+                // Load agent stats to ensure calls today reflect DB truth
+                try {
+                    const agentRes = await fetch(`${API_BASE}/api/admin/agent/stats`);
+                    const agentData = await agentRes.json();
+                    if (agentData.success) {
+                        document.getElementById('helplineCallsToday').textContent = agentData.stats.total_calls || 0;
+                        // Populate live panel from today's calls (approximate live view)
+                        populateLiveCalls(agentData.recent_calls || []);
+                    }
+                } catch(e) {}
+
+                // Load FHIR patients data
+                const patientsResponse = await fetch(`${API_BASE}/fhir/Patient`);
+                const patientsData = await patientsResponse.json();
+
+                if (patientsData.resourceType === 'Bundle') {
+                    updatePatientStats(patientsData);
+                }
+
+                // Load recent calls (DB truth)
+                await loadRecentCalls();
+                // Load upcoming calls/appointments
+                await loadUpcomingCalls();
+
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                showError('Failed to load dashboard data. Make sure middleware is running on port 4000.');
+            }
+        }
+
+        function updateStatsCards(stats) {
+            // Update total calls (all time)
+            document.getElementById('totalCalls').textContent = stats.total?.calls || 0;
+            document.getElementById('callsChange').textContent = `${stats.today?.calls || 0} calls today`;
+
+            // Update priority cases (high-risk patients)
+            document.getElementById('priorityCases').textContent = stats.priority?.cases || 0;
+            document.getElementById('priorityChange').textContent = 'High-risk patients';
+
+            // Update total revenue from orders
+            const todayRevenue = stats.today?.revenue || 0;
+            document.getElementById('totalRevenue').textContent = `$${todayRevenue.toFixed(2)}`;
+            document.getElementById('revenueChange').textContent = `${stats.today?.orders || 0} orders today`;
+
+            // Update call costs (based on Retell AI pricing)
+            const avgCallDuration = 3; // 3 minutes average
+            const costPerMinute = 0.12; // $0.12 per minute (Retell AI pricing)
+            const todayCallCosts = (stats.today?.calls || 0) * avgCallDuration * costPerMinute;
+            document.getElementById('callCosts').textContent = `$${todayCallCosts.toFixed(2)}`;
+            document.getElementById('costsChange').textContent = `${stats.today?.calls || 0} calls today`;
+
+            // Update helpline banner
+            document.getElementById('helplineCallsToday').textContent = stats.today?.calls || 0;
+        }
+
+        function updatePatientStats(bundle) {
+            // This will be called when FHIR patient data is loaded
+            // No longer using this for main stats
+        }
+
+        async function loadRecentCalls() {
+            try {
+                // Load recent calls directly from DB (voice checkouts)
+                const res = await fetch(`${API_BASE}/api/admin/transactions?limit=10`);
+                const data = await res.json();
+
+                if (data.success) {
+                    // Also populate tabbed recent panel
+                    const container = document.getElementById('recentCallsList');
+                    container.innerHTML = data.transactions.slice(0, 10).map(call => {
+                        const time = new Date(call.created_at).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+                        const statusText = call.status.charAt(0).toUpperCase() + call.status.slice(1);
+                        return `
+                            <div class="patient-item">
+                                <div class="patient-info">
+                                    <div class="patient-id">${call.id}</div>
+                                    <div class="patient-name">${call.customer_name || 'Anonymous'}</div>
+                                    <div class="patient-phone">${call.customer_phone || ''}</div>
+                                </div>
+                                <div class="patient-details">
+                                    <div class="call-duration">${time}</div>
+                                    <span class="patient-status status-in-progress">${statusText}</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            } catch (error) {
+                console.error('Error loading patients:', error);
+            }
+        }
+
+        /* Removed legacy recent/referral builders; tabs render calls instead */
+
+        async function loadUpcomingCalls() {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/appointments/upcoming?limit=8`);
+                const data = await res.json();
+                const container = document.getElementById('upcomingCallsList');
+                if (!data.success || data.count === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">⏱️</div>
+                            <p>No upcoming calls.</p>
+                        </div>
+                    `;
+                    // Also clear next appointment card
+                    setNextAppt(null);
+                    return;
+                }
+                container.innerHTML = data.appointments.map(a => `
+                    <div class="patient-item">
+                        <div class="patient-info">
+                            <div class="patient-id">${a.appointment_type || 'Consultation'} · ${a.status}</div>
+                            <div class="patient-name">${a.patient_name || 'Unknown'} · ${a.provider || 'Team'}</div>
+                            <div class="patient-phone">${a.patient_phone || ''} ${a.patient_email ? '· ' + a.patient_email : ''}</div>
+                        </div>
+                        <div class="patient-details">
+                            <div class="call-duration">${new Date(a.start_time || `${a.date}T${a.time}:00`).toLocaleString()}</div>
+                            ${a.calendar_link ? '<a class="fhir-badge" href="'+a.calendar_link+'" target="_blank">Calendar</a>': ''}
+                        </div>
+                    </div>
+                `).join('');
+
+                // Update next appointment banner with first upcoming
+                setNextAppt(data.appointments[0]);
+            } catch (e) {
+                const container = document.getElementById('upcomingCallsList');
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">❌</div>
+                        <p>Failed to load upcoming calls.</p>
+                    </div>
+                `;
+                setNextAppt(null);
+            }
+        }
+
+        function setNextAppt(appt) {
+            const whenEl = document.getElementById('nextApptWhen');
+            const patientEl = document.getElementById('nextApptPatient');
+            const typeEl = document.getElementById('nextApptType');
+            const provEl = document.getElementById('nextApptProvider');
+            if (!appt) {
+                whenEl.textContent = 'No upcoming appointment';
+                patientEl.textContent = '—';
+                typeEl.textContent = '—';
+                provEl.textContent = '—';
+                window.__nextApptLink = null;
+                return;
+            }
+            const when = new Date(appt.start_time || `${appt.date}T${appt.time}:00`).toLocaleString();
+            whenEl.textContent = when;
+            patientEl.textContent = `${appt.patient_name || 'Unknown'}${appt.patient_phone ? ' · ' + appt.patient_phone : ''}`;
+            typeEl.textContent = appt.appointment_type || 'Consultation';
+            provEl.textContent = appt.provider || 'Team';
+            window.__nextApptLink = appt.calendar_link || null;
+        }
+
+        function openInCalendar() {
+            if (window.__nextApptLink) {
+                window.open(window.__nextApptLink, '_blank');
+            } else {
+                goCalendar();
+            }
+        }
+        function goCalendar() { window.location.href = 'calendar.html'; }
+
+        function switchCallsTab(which) {
+            const up = document.getElementById('upcomingCallsList');
+            const re = document.getElementById('recentCallsList');
+            const lv = document.getElementById('liveCallsList');
+            document.getElementById('tabUpcoming').classList.toggle('btn-primary', which==='upcoming');
+            document.getElementById('tabRecent').classList.toggle('btn-primary', which==='recent');
+            document.getElementById('tabLive').classList.toggle('btn-primary', which==='live');
+            up.style.display = which==='upcoming' ? 'block' : 'none';
+            re.style.display = which==='recent' ? 'block' : 'none';
+            lv.style.display = which==='live' ? 'block' : 'none';
+        }
+
+        function populateLiveCalls(calls) {
+            const container = document.getElementById('liveCallsList');
+            if (!container) return;
+            if (!calls || calls.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📡</div>
+                        <p>No calls yet today.</p>
+                    </div>
+                `;
+                return;
+            }
+            container.innerHTML = calls.slice(0, 10).map(call => {
+                const time = new Date(call.created_at).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
+                const statusText = call.status ? (call.status.charAt(0).toUpperCase()+call.status.slice(1)) : 'In Progress';
+                return `
+                    <div class="patient-item">
+                        <div class="patient-info">
+                            <div class="patient-id">${call.id || ''}</div>
+                            <div class="patient-name">${call.customer_name || 'Anonymous'}</div>
+                            <div class="patient-phone">${call.customer_phone || ''}</div>
+                        </div>
+                        <div class="patient-details">
+                            <div class="call-duration">${time}</div>
+                            <span class="patient-status status-in-progress">${statusText}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function viewPatientDetails(patientId) {
+            // Navigate to patient details page
+            window.location.href = `patients.html?id=${patientId}`;
+        }
+
+        /* Referral list removed per new tabbed Calls design */
+
+        
+
+        function viewAllReferrals() {
+            window.location.href = 'patients.html?filter=high-risk';
+        }
+
+        function showError(message) {
+            const container = document.getElementById('recentPatientsList');
+            if (!container) return;
+
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">❌</div>
+                    <p>${message}</p>
+                    <button class="btn btn-secondary" onclick="loadDashboardData()">Retry</button>
+                </div>
+            `;
+        }
+
+        function viewAllPatients() {
+            window.location.href = 'patients.html';
+        }
+
+        function testCall() {
+            alert('📞 AI Voice Receptionist Test\n\nTo test the voice receptionist:\n\n1. Call: +1 (585) 620-2445\n2. Speak with the AI voice receptionist\n3. Book an appointment\n4. Get appointment details\n5. Client data will appear in this dashboard\n\nAll calls are recorded as FHIR Encounter resources.');
+        }
+
+        function viewAgent() {
+            window.location.href = 'agent.html';
+        }
+
+        function logout() {
+            if (statsInterval) clearInterval(statsInterval);
+            sessionStorage.clear();
+            window.location.href = '../index.html';
+        }
+    </script>
+</body>
+
+</html>

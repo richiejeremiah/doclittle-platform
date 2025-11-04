@@ -1,0 +1,83 @@
+/**
+ * STANDARD PAYMENT REQUEST MODEL
+ * 
+ * This is the universal format that ALL protocols convert to.
+ * The orchestrator only understands THIS format.
+ */
+
+const { v4: uuidv4 } = require('uuid');
+
+class PaymentRequest {
+    constructor(data) {
+        this.transaction_id = data.transaction_id || uuidv4();
+        this.merchant_id = data.merchant_id;
+        this.customer = {
+            name: data.customer?.name || null,
+            phone: data.customer?.phone || null,
+            email: data.customer?.email || null
+        };
+        this.items = data.items || [];
+        this.totals = {
+            subtotal: data.totals?.subtotal || 0,
+            tax: data.totals?.tax || 0,
+            shipping: data.totals?.shipping || 0,
+            total: data.totals?.total || 0
+        };
+        this.payment = {
+            method: data.payment?.method || 'link', // 'stripe' | 'link' | 'mastercard' | 'visa'
+            save_for_future: data.payment?.save_for_future || false,
+            currency: data.payment?.currency || 'USD'
+        };
+        this.source = {
+            protocol: data.source?.protocol || 'unknown', // 'acp' | 'ap2' | 'voice'
+            platform: data.source?.platform || 'unknown', // 'chatgpt' | 'google' | 'retell' | 'vapi'
+            input_type: data.source?.input_type || 'unknown' // 'text' | 'voice'
+        };
+        this.metadata = data.metadata || {};
+    }
+
+    /**
+     * Validate the payment request
+     */
+    validate() {
+        const errors = [];
+
+        if (!this.merchant_id) {
+            errors.push('merchant_id is required');
+        }
+
+        if (!this.customer.phone && !this.customer.email) {
+            errors.push('customer phone or email is required');
+        }
+
+        if (!this.items || this.items.length === 0) {
+            errors.push('at least one item is required');
+        }
+
+        if (!this.totals.total || this.totals.total <= 0) {
+            errors.push('total amount must be greater than 0');
+        }
+
+        return {
+            valid: errors.length === 0,
+            errors
+        };
+    }
+
+    /**
+     * Get a summary for logging
+     */
+    getSummary() {
+        return {
+            transaction_id: this.transaction_id,
+            merchant_id: this.merchant_id,
+            customer: this.customer.name || this.customer.phone,
+            total: this.totals.total,
+            payment_method: this.payment.method,
+            protocol: this.source.protocol,
+            platform: this.source.platform
+        };
+    }
+}
+
+module.exports = PaymentRequest;

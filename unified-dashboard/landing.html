@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>doclittle- AI Voice Receptionist</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, 'Helvetica Neue', sans-serif;
+            background: #D2691E;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Header Section */
+        .header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 50px 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #FFFFFF;
+            letter-spacing: -0.5px;
+            margin: 0;
+        }
+
+        /* Main Content - Logo Section */
+        .main-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .logo-container {
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 120px;
+            font-weight: 300;
+            color: #FFFFFF;
+            line-height: 1;
+            margin-bottom: 0;
+            letter-spacing: -8px;
+            white-space: nowrap;
+            display: inline-block;
+        }
+
+        .logo .doc {
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+            font-weight: 400;
+            color: #FFFFFF;
+            display: inline;
+        }
+
+        .logo .little {
+            font-family: 'Verdana', Geneva, sans-serif;
+            font-weight: 700;
+            color: #FFFFFF;
+            display: inline;
+        }
+
+        .logo .dot {
+            color: #FFFFFF;
+            font-weight: 700;
+            display: inline;
+        }
+
+        /* Typewriter Animation */
+        @keyframes typewriter {
+            from {
+                max-width: 0;
+            }
+            to {
+                max-width: 100%;
+            }
+        }
+
+        @keyframes blink {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0;
+            }
+        }
+
+        .logo .doc {
+            overflow: hidden;
+            max-width: 0;
+            animation: typewriter 1s steps(3) 0.5s forwards;
+        }
+
+        .logo .little {
+            overflow: hidden;
+            max-width: 0;
+            animation: typewriter 1.2s steps(6) 1.8s forwards;
+        }
+
+        .logo .dot {
+            opacity: 0;
+            animation: fadeInDot 0.3s ease-in 3.2s forwards;
+        }
+
+        @keyframes fadeInDot {
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Blinking cursor effect */
+        .logo::after {
+            content: '|';
+            display: inline-block;
+            margin-left: 5px;
+            animation: blink 0.7s infinite, removeCursor 0.1s 3.5s forwards;
+            color: #FFFFFF;
+            font-weight: 300;
+        }
+
+        @keyframes removeCursor {
+            to {
+                opacity: 0;
+            }
+        }
+
+        /* Footer Section */
+        .footer {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            padding: 50px 60px;
+            z-index: 10;
+        }
+
+        .call-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0;
+            background: transparent;
+            border: none;
+            font-size: 24px;
+            font-weight: 600;
+            color: #FFFFFF;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            position: relative;
+        }
+
+        .call-button:hover {
+            transform: translateX(5px);
+        }
+
+        .call-button::after {
+            content: '→';
+            font-size: 28px;
+            font-weight: 400;
+            transition: transform 0.3s ease;
+            margin-left: 8px;
+        }
+
+        .call-button:hover::after {
+            transform: translateX(5px);
+        }
+
+        /* Top Right Call Button */
+        .top-call-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0;
+            background: transparent;
+            border: none;
+            font-size: 24px;
+            font-weight: 600;
+            color: #FFFFFF;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .top-call-button:hover {
+            transform: translateX(5px);
+        }
+
+        .top-call-button::after {
+            content: '→';
+            font-size: 28px;
+            font-weight: 400;
+            transition: transform 0.3s ease;
+        }
+
+        .top-call-button:hover::after {
+            transform: translateX(5px);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header {
+                padding: 30px 30px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .top-call-button {
+                font-size: 20px;
+            }
+
+            .top-call-button::after {
+                font-size: 24px;
+            }
+
+            .logo {
+                font-size: 70px;
+            }
+
+            .footer {
+                padding: 30px 30px;
+            }
+
+            .call-button {
+                font-size: 20px;
+            }
+
+            .call-button::after {
+                font-size: 24px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                padding: 20px 20px;
+            }
+
+            .header h1 {
+                font-size: 16px;
+            }
+
+            .top-call-button {
+                font-size: 18px;
+            }
+
+            .logo {
+                font-size: 50px;
+            }
+
+            .footer {
+                padding: 20px 20px;
+            }
+
+            .call-button {
+                font-size: 18px;
+            }
+
+            .call-button::after {
+                font-size: 22px;
+            }
+        }
+
+        /* Animation for smooth entrance */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header, .logo-container, .footer {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+
+        .logo-container {
+            animation-delay: 0.2s;
+        }
+
+        .footer {
+            animation-delay: 0.4s;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <h1>doclittle- AI Voice Receptionist</h1>
+        <button class="top-call-button" onclick="initiateCall()">
+            Call
+        </button>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="logo-container">
+            <div class="logo">
+                <span class="doc">Doc</span><span class="little">Little</span><span class="dot">.</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <button class="call-button" onclick="window.location.href='index.html'">
+            Login
+        </button>
+    </footer>
+
+    <script>
+        // Helpline phone number
+        const HELPLINE_PHONE = '+15856202445';
+
+        function initiateCall() {
+            // Option 1: If this is a mobile device, directly dial the number
+            if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                window.location.href = `tel:${HELPLINE_PHONE}`;
+            } else {
+                // Option 2: For desktop, show the phone number or initiate web-based call
+                showCallModal(HELPLINE_PHONE);
+            }
+        }
+
+        function showCallModal(phoneNumber) {
+            // Create a simple modal to show the phone number
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+                animation: fadeIn 0.3s ease-out;
+            `;
+
+            modal.innerHTML = `
+                <div style="
+                    background: #D2691E;
+                    padding: 48px;
+                    border-radius: 20px;
+                    text-align: center;
+                    max-width: 500px;
+                    width: 90%;
+                    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+                    border: 3px solid rgba(255, 255, 255, 0.3);
+                ">
+                    <h2 style="
+                        font-size: 28px;
+                        margin-bottom: 24px;
+                        color: #FFFFFF;
+                        font-weight: 700;
+                    ">Call Our Helpline</h2>
+                    <p style="
+                        font-size: 18px;
+                        color: rgba(255, 255, 255, 0.9);
+                        margin-bottom: 32px;
+                    ">We're here to support you 24/7</p>
+                    <a href="tel:${phoneNumber}" style="
+                        display: block;
+                        font-size: 36px;
+                        font-weight: 700;
+                        color: #FFFFFF;
+                        text-decoration: none;
+                        margin-bottom: 32px;
+                        letter-spacing: 1px;
+                        background: rgba(255, 255, 255, 0.1);
+                        padding: 16px 24px;
+                        border-radius: 12px;
+                        border: 2px solid rgba(255, 255, 255, 0.3);
+                    ">${formatPhoneNumber(phoneNumber)}</a>
+                    <button onclick="this.parentElement.parentElement.remove()" style="
+                        padding: 14px 32px;
+                        background: rgba(255, 255, 255, 0.2);
+                        border: 2px solid rgba(255, 255, 255, 0.4);
+                        border-radius: 10px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                        color: #FFFFFF;
+                    " onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">Close</button>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            // Close modal when clicking outside
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
+
+        function formatPhoneNumber(phoneNumber) {
+            // Format: (XXX) XXX-XXXX
+            const cleaned = phoneNumber.replace(/\D/g, '');
+            if (cleaned.length === 11 && cleaned.startsWith('1')) {
+                const withoutCountryCode = cleaned.substring(1);
+                return `(${withoutCountryCode.substring(0, 3)}) ${withoutCountryCode.substring(3, 6)}-${withoutCountryCode.substring(6)}`;
+            } else if (cleaned.length === 10) {
+                return `(${cleaned.substring(0, 3)}) ${cleaned.substring(3, 6)}-${cleaned.substring(6)}`;
+            }
+            return phoneNumber;
+        }
+
+        // Add keyboard accessibility
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                const callButton = document.querySelector('.call-button');
+                if (document.activeElement === callButton) {
+                    e.preventDefault();
+                    initiateCall();
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

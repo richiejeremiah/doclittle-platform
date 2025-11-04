@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Your Payment</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #1a202c;
+        }
+
+        .order-summary {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+
+        .product-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .total-amount {
+            font-size: 32px;
+            font-weight: 700;
+            color: #667eea;
+            margin: 20px 0;
+        }
+
+        #card-element {
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .pay-button {
+            width: 100%;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .pay-button:hover {
+            background: #5568d3;
+        }
+
+        .pay-button:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            color: #e53e3e;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .success-icon {
+            font-size: 64px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div id="loadingState" class="card">
+            <div class="spinner"></div>
+            <p style="text-align: center;">Loading your order...</p>
+        </div>
+
+        <div id="errorState" class="card hidden">
+            <h1>⚠️ Error</h1>
+            <p id="errorMessage" class="error-message"></p>
+        </div>
+
+        <div id="paymentForm" class="card hidden">
+            <h1>Complete Your Order</h1>
+            <div class="order-summary">
+                <div class="product-name" id="productName"></div>
+                <div class="total-amount" id="totalAmount"></div>
+            </div>
+            <div id="card-element"></div>
+            <div id="card-errors" class="error-message"></div>
+            <button id="submitButton" class="pay-button">Pay Now</button>
+        </div>
+
+        <div id="successState" class="card hidden">
+            <div class="success-icon">✅</div>
+            <h1>Payment Successful!</h1>
+            <p style="text-align: center; color: #4a5568; margin-top: 10px;">Your order has been confirmed.</p>
+        </div>
+    </div>
+
+    <script>
+        const token = window.location.pathname.split('/').pop();
+        let stripe, cardElement, checkout;
+
+        async function init() {
+            try {
+                const res = await fetch(`/api/payment/checkout/${token}`);
+                const data = await res.json();
+
+                if (!data.success) throw new Error(data.error);
+
+                checkout = data.checkout;
+                document.getElementById('productName').textContent = checkout.product_name;
+                document.getElementById('totalAmount').textContent = `$${checkout.amount.toFixed(2)}`;
+                document.getElementById('submitButton').textContent = `Pay $${checkout.amount.toFixed(2)}`;
+
+                stripe = Stripe(data.stripe_publishable_key);
+                const elements = stripe.elements();
+                cardElement = elements.create('card', {
+                    style: { base: { fontSize: '16px', color: '#32325d' } }
+                });
+                cardElement.mount('#card-element');
+                cardElement.on('change', e => {
+                    document.getElementById('card-errors').textContent = e.error ? e.error.message : '';
+                });
+
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('paymentForm').classList.remove('hidden');
+
+                document.getElementById('submitButton').onclick = handlePay;
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        async function handlePay() {
+            const btn = document.getElementById('submitButton');
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+
+            try {
+                const { error, paymentMethod } = await stripe.createPaymentMethod({
+                    type: 'card',
+                    card: cardElement
+                });
+
+                if (error) throw error;
+
+                const res = await fetch('/api/payment/process', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        payment_token: token,
+                        payment_method_id: paymentMethod.id,
+                        amount: Math.round(checkout.amount * 100),
+                        currency: 'usd'
+                    })
+                });
+
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+
+                await fetch(`/voice/checkout/complete/${checkout.id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ payment_intent_id: data.payment_intent_id })
+                });
+
+                document.getElementById('paymentForm').classList.add('hidden');
+                document.getElementById('successState').classList.remove('hidden');
+            } catch (err) {
+                document.getElementById('card-errors').textContent = err.message;
+                btn.disabled = false;
+                btn.textContent = `Pay $${checkout.amount.toFixed(2)}`;
+            }
+        }
+
+        function showError(msg) {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.remove('hidden');
+            document.getElementById('errorMessage').textContent = msg;
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

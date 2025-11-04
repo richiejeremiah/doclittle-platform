@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billing - doclittle- AI Voice Receptionist</title>
+    <link rel="stylesheet" href="../assets/css/global.css">
+    <script src="../assets/js/config.js"></script>
+    <style>
+        :root {
+            --primary: #0891b2;
+            --primary-dark: #0e7490;
+            --primary-light: #06b6d4;
+        }
+
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .sidebar-logo {
+            font-size: 32px;
+            line-height: 1;
+            letter-spacing: -3px;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-logo .doc {
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+        }
+
+        .sidebar-logo .little {
+            font-family: 'Verdana', Geneva, sans-serif;
+            font-weight: 700;
+        }
+
+        .sidebar-subtitle {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-top: 4px;
+        }
+
+        .sidebar-nav {
+            padding: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--gray-700);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+            text-decoration: none;
+        }
+
+        .nav-item:hover {
+            background: var(--gray-50);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--gray-200);
+            position: absolute;
+            bottom: 0;
+            width: 260px;
+            background: white;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            background: var(--gray-50);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--gray-900);
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            color: var(--gray-500);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            padding: 32px;
+            background: var(--gray-50);
+        }
+
+        .page-header {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .page-title {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            color: var(--gray-600);
+            font-size: 14px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            box-shadow: var(--shadow-xl);
+            transform: translateY(-4px);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .stat-title {
+            font-size: 14px;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-icon {
+            font-size: 32px;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .stat-change {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-600);
+        }
+
+        /* Filters and Search */
+        .controls-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .controls-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid var(--gray-300);
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .filter-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .export-btn {
+            padding: 8px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .export-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .search-input-wrapper {
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px 12px 48px;
+            border: 1px solid var(--gray-300);
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(210, 105, 30, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            color: var(--gray-400);
+        }
+
+        /* Orders Grid */
+        .orders-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+            gap: 24px;
+        }
+
+        .order-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s;
+        }
+
+        .order-card:hover {
+            box-shadow: var(--shadow-xl);
+            transform: translateY(-4px);
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .order-id {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .order-id strong {
+            font-size: 16px;
+            color: var(--gray-900);
+        }
+
+        .order-time {
+            font-size: 13px;
+            color: var(--gray-500);
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .order-customer {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: var(--gray-50);
+            border-radius: 8px;
+        }
+
+        .customer-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .customer-info {
+            flex: 1;
+        }
+
+        .customer-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 4px;
+        }
+
+        .customer-contact {
+            font-size: 13px;
+            color: var(--gray-600);
+        }
+
+        .order-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: var(--gray-50);
+            border-radius: 8px;
+        }
+
+        .order-product {
+            flex: 1;
+        }
+
+        .product-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 4px;
+        }
+
+        .product-quantity {
+            font-size: 13px;
+            color: var(--gray-600);
+        }
+
+        .order-amount {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .order-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: var(--gray-50);
+            border-radius: 8px;
+        }
+
+        .order-meta-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .order-meta-label {
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        .order-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px;
+            color: var(--gray-600);
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow-md);
+            grid-column: 1 / -1;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+                height: auto;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .orders-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .controls-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <span class="doc">Doc</span><span class="little">Little</span><span
+                        style="font-weight:700;">.</span>
+                </div>
+                <div class="sidebar-subtitle">AI Voice Receptionist</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="patients.html" class="nav-item">
+                    <span class="nav-icon">👥</span>
+                    <span>Clients</span>
+                </a>
+                <a href="calendar.html" class="nav-item">
+                    <span class="nav-icon">📅</span>
+                    <span>Calendar</span>
+                </a>
+                <a href="records.html" class="nav-item">
+                    <span class="nav-icon">📁</span>
+                    <span>Records</span>
+                </a>
+                <a href="orders.html" class="nav-item active">
+                    <span class="nav-icon">💳</span>
+                    <span>Billing</span>
+                </a>
+                <a href="agent.html" class="nav-item">
+                    <span class="nav-icon">🎙️</span>
+                    <span>Voice Agent</span>
+                </a>
+                <a href="treatments.html" class="nav-item">
+                    <span class="nav-icon">🏷️</span>
+                    <span>Treatments</span>
+                </a>
+                <a href="settings.html" class="nav-item">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Settings</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">HP</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">Healthcare Provider</div>
+                        <div class="user-role">Provider</div>
+                    </div>
+                    <button class="logout-btn" onclick="logout()" title="Logout">
+                        🚪
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Billing</h1>
+                <p class="page-subtitle">Aggregated by unique client record.</p>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Clients</span>
+                        <span class="stat-icon">👥</span>
+                    </div>
+                    <div class="stat-value" id="totalPatients">0</div>
+                    <div class="stat-change">Unique records with appointments</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">appointments all time</span>
+
+                    </div>
+                    <div class="stat-value" id="totalAppointments">0</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">This Week</span>
+                        <span class="stat-icon">🗓️</span>
+                    </div>
+                    <div class="stat-value" id="weekAppointments">0</div>
+                    <div class="stat-change">Appointments this week</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Revenue</span>
+                        <span class="stat-icon">💰</span>
+                    </div>
+                    <div class="stat-value" id="totalRevenue">$0.00</div>
+                </div>
+            </div>
+
+            <!-- Controls Section -->
+            <div class="controls-section">
+                <div class="search-input-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" class="search-input"
+                        placeholder="Search by client name, phone, or email..." oninput="searchPatients()">
+                </div>
+            </div>
+
+            <!-- Orders Grid -->
+            <div class="orders-grid" id="ordersList">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📦</div>
+                    <p>Loading patient billing...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = window.API_BASE || 'http://localhost:4000';
+        let userData = null;
+        let billingRows = [];
+
+        if (sessionStorage.getItem('authenticated') !== 'true') {
+            window.location.href = '../index.html';
+        }
+
+        userData = JSON.parse(sessionStorage.getItem('user'));
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserInfo();
+            loadBilling();
+        });
+
+        function loadUserInfo() {
+            if (userData) {
+                document.getElementById('userName').textContent = userData.name;
+                const initials = userData.name.split(' ').map(n => n[0]).join('');
+                document.getElementById('userAvatar').textContent = initials;
+            }
+        }
+
+        async function loadBilling() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/billing`);
+                const data = await response.json();
+
+                if (data.success) {
+                    billingRows = data.patients;
+                    displayPatients(billingRows);
+                    updateStatsFromBilling(billingRows);
+                } else {
+                    throw new Error(data.error || 'Failed to load billing');
+                }
+            } catch (error) {
+                console.error('Error loading billing:', error);
+                document.getElementById('ordersList').innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">❌</div>
+                <p>Failed to load billing. Make sure middleware is running.</p>
+                <button class="btn btn-secondary" onclick="loadBilling()">Retry</button>
+            </div>
+        `;
+            }
+        }
+
+        function updateStatsFromBilling(rows) {
+            const totalPatients = rows.length;
+            const totalAppointments = rows.reduce((s, r) => s + (r.total_appointments || 0), 0);
+            const weekAppointments = rows.reduce((s, r) => s + (r.week_appointments || 0), 0);
+            const totalRevenue = rows.reduce((s, r) => s + (r.total_amount || 0), 0);
+
+            document.getElementById('totalPatients').textContent = totalPatients;
+            document.getElementById('totalAppointments').textContent = totalAppointments;
+            document.getElementById('weekAppointments').textContent = weekAppointments;
+            document.getElementById('totalRevenue').textContent = `$${totalRevenue.toFixed(2)}`;
+        }
+
+        function displayPatients(rows) {
+            const container = document.getElementById('ordersList');
+
+            if (rows.length === 0) {
+                container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📦</div>
+                <p>No billing records found.</p>
+            </div>
+        `;
+                return;
+            }
+
+            container.innerHTML = rows.map(row => createPatientCard(row)).join('');
+        }
+
+        function createPatientCard(row) {
+            const initials = (row.patient_name || 'U').split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase();
+            return `
+        <div class="order-card">
+            <div class="order-customer">
+                <div class="customer-avatar">${initials}</div>
+                <div class="customer-info">
+                    <div class="customer-name">${row.patient_name}</div>
+                    <div class="customer-contact">
+                        ${row.patient_phone || 'No phone'} ${row.patient_email ? '· ' + row.patient_email : ''}
+                    </div>
+                </div>
+            </div>
+
+            <div class="order-details">
+                <div class="order-product">
+                    <div class="product-name">Appointments: ${row.total_appointments} (This week: ${row.week_appointments})</div>
+                    <div class="product-quantity">Confirmed: ${row.confirmed_appointments} · Cancelled: ${row.cancelled_appointments}</div>
+                </div>
+                <div class="order-amount">$${(row.total_amount || 0).toFixed(2)}</div>
+            </div>
+
+            <div class="order-meta">
+                <div class="order-meta-item">
+                    <span class="order-meta-label">This week revenue:</span>
+                    <span>$${(row.week_amount || 0).toFixed(2)}</span>
+                </div>
+                ${row.last_appointment_at ? `
+                <div class="order-meta-item">
+                    <span class="order-meta-label">Last appointment:</span>
+                    <span>${new Date(row.last_appointment_at).toLocaleString()}</span>
+                </div>` : ''}
+            </div>
+
+            <div class="order-actions">
+                <a class="btn btn-secondary btn-sm" href="records.html?id=${encodeURIComponent(row.patient_id || '')}">📄 View Record</a>
+                <a class="btn btn-primary btn-sm" href="patients.html">👥 Clients</a>
+            </div>
+        </div>`;
+        }
+
+        function searchPatients() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            if (!searchTerm) {
+                displayPatients(billingRows);
+                return;
+            }
+
+            const filtered = billingRows.filter(r =>
+                (r.patient_name && r.patient_name.toLowerCase().includes(searchTerm)) ||
+                (r.patient_phone && r.patient_phone.includes(searchTerm)) ||
+                (r.patient_email && r.patient_email.toLowerCase().includes(searchTerm))
+            );
+
+            displayPatients(filtered);
+        }
+
+        function exportOrders() { // export billing as CSV
+            const headers = ['Client Name', 'Phone', 'Email', 'Total Appointments', 'Confirmed', 'Cancelled', 'This Week', 'Total Amount', 'Week Amount', 'Last Appointment'];
+            const rows = billingRows.map(r => [
+                r.patient_name || '',
+                r.patient_phone || '',
+                r.patient_email || '',
+                r.total_appointments || 0,
+                r.confirmed_appointments || 0,
+                r.cancelled_appointments || 0,
+                r.week_appointments || 0,
+                (r.total_amount || 0),
+                (r.week_amount || 0),
+                r.last_appointment_at || ''
+            ]);
+            const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `billing-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = '../index.html';
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - doclittle- AI Voice Receptionist</title>
+    <link rel="stylesheet" href="../assets/css/global.css">
+    <script src="../assets/js/config.js"></script>
+    <style>
+        :root {
+            --primary: #0891b2;
+            --primary-dark: #0e7490;
+            --primary-light: #06b6d4;
+        }
+
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .sidebar-logo {
+            font-size: 32px;
+            line-height: 1;
+            letter-spacing: -3px;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-logo .doc {
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+            font-weight: 400;
+        }
+
+        .sidebar-logo .little {
+            font-family: 'Verdana', Geneva, sans-serif;
+            font-weight: 700;
+            font-style: normal;
+        }
+
+        .sidebar-subtitle {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-top: 4px;
+        }
+
+        .sidebar-nav {
+            padding: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--gray-700);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+        }
+
+        .nav-item:hover {
+            background: var(--gray-50);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--gray-200);
+            position: absolute;
+            bottom: 0;
+            width: 260px;
+            background: white;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            background: var(--gray-50);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--gray-900);
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            color: var(--gray-500);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            padding: 32px;
+        }
+
+        .page-header {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .page-title {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            color: var(--gray-600);
+            font-size: 14px;
+        }
+
+        /* Settings Sections */
+        .settings-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .settings-section h3 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .setting-row:last-child {
+            border-bottom: none;
+        }
+
+        .setting-info h4 {
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .setting-description {
+            font-size: 14px;
+            color: var(--gray-600);
+        }
+
+        .setting-action {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        /* Connected Services */
+        .service-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px;
+            background: var(--gray-50);
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .service-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .service-icon.stripe {
+            background: #635bff;
+        }
+
+        .service-icon.twilio {
+            background: #f22f46;
+        }
+
+        .service-icon.shopify {
+            background: #96bf48;
+        }
+
+        .service-info {
+            flex: 1;
+        }
+
+        .service-info h4 {
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .service-status {
+            font-size: 13px;
+            color: var(--gray-600);
+        }
+
+        .service-status.connected {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .danger-zone {
+            background: var(--danger-light);
+            border: 2px solid var(--danger);
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 24px;
+        }
+
+        .danger-zone h3 {
+            color: var(--danger);
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+                height: auto;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .setting-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <span class="doc">Doc</span><span class="little">Little</span><span style="font-weight:700;">.</span>
+                </div>
+                <div class="sidebar-subtitle">AI Voice Receptionist</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="patients.html" class="nav-item">
+                    <span class="nav-icon">👥</span>
+                    <span>Clients</span>
+                </a>
+                <a href="calendar.html" class="nav-item">
+                    <span class="nav-icon">📅</span>
+                    <span>Calendar</span>
+                </a>
+                <a href="records.html" class="nav-item">
+                    <span class="nav-icon">📁</span>
+                    <span>Records</span>
+                </a>
+                <a href="orders.html" class="nav-item">
+                    <span class="nav-icon">💳</span>
+                    <span>Billing</span>
+                </a>
+                <a href="agent.html" class="nav-item">
+                    <span class="nav-icon">🎙️</span>
+                    <span>Voice Agent</span>
+                </a>
+                <a href="treatments.html" class="nav-item">
+                    <span class="nav-icon">🏷️</span>
+                    <span>Treatments</span>
+                </a>
+                <a href="settings.html" class="nav-item active">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Settings</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">VC</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">Business Owner</div>
+                        <div class="user-role">Owner</div>
+                    </div>
+                    <button class="logout-btn" onclick="logout()" title="Logout">
+                        🚪
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Settings</h1>
+                <p class="page-subtitle">Manage your AI voice receptionist platform settings</p>
+            </div>
+
+            <!-- Business Information -->
+            <div class="settings-section">
+                <h3>🏪 Business Information</h3>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <h4>Business Name</h4>
+                        <p class="setting-description" id="businessNameSetting">VitaminCo</p>
+                    </div>
+                    <div class="setting-action">
+                        <button class="btn btn-secondary btn-sm" onclick="editBusinessName()">
+                            Edit
+                        </button>
+                    </div>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <h4>Contact Email</h4>
+                        <p class="setting-description" id="businessEmail">owner@vitamins.com</p>
+                    </div>
+                    <div class="setting-action">
+                        <button class="btn btn-secondary btn-sm" onclick="editEmail()">
+                            Edit
+                        </button>
+                    </div>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <h4>Phone Number</h4>
+                        <p class="setting-description">+1 (862) 230-7479</p>
+                    </div>
+                    <div class="setting-action">
+                        <button class="btn btn-secondary btn-sm" onclick="editPhone()">
+                            Edit
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Connected Services -->
+            <div class="settings-section">
+                <h3>🔌 Connected Services</h3>
+
+                <div class="service-card">
+                    <div class="service-icon stripe">💳</div>
+                    <div class="service-info">
+                        <h4>Stripe</h4>
+                        <p class="service-status connected">✅ Connected - Payments enabled</p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="manageStripe()">
+                        Manage
+                    </button>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-icon twilio">📱</div>
+                    <div class="service-info">
+                        <h4>Twilio</h4>
+                        <p class="service-status connected">✅ Connected - SMS enabled</p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="manageTwilio()">
+                        Manage
+                    </button>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-icon shopify">🛍️</div>
+                    <div class="service-info">
+                        <h4>Shopify (Optional)</h4>
+                        <p class="service-status">Not connected - Sync products from Shopify</p>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="connectShopify()">
+                        Connect
+                    </button>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="settings-section">
+                <h3>🔔 Notifications</h3>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <h4>Order Notifications</h4>
+                        <p class="setting-description">Get notified when new orders arrive</p>
+                    </div>
+                    <div class="setting-action">
+                        <input type="checkbox" checked onchange="toggleNotification('orders')">
+                    </div>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <h4>Fraud Alerts</h4>
+                        <p class="setting-description">Receive alerts for suspicious activity</p>
+                    </div>
+                    <div class="setting-action">
+                        <input type="checkbox" checked onchange="toggleNotification('fraud')">
+                    </div>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <h4>Weekly Reports</h4>
+                        <p class="setting-description">Get weekly performance summaries</p>
+                    </div>
+                    <div class="setting-action">
+                        <input type="checkbox" checked onchange="toggleNotification('reports')">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Billing -->
+            <div class="settings-section">
+                <h3>💰 Billing & Subscription</h3>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <h4>Current Plan</h4>
+                        <p class="setting-description">Pro Plan - $299/month</p>
+                    </div>
+                    <div class="setting-action">
+                        <span class="badge badge-primary">Active</span>
+                        <button class="btn btn-secondary btn-sm" onclick="viewPlans()">
+                            Change Plan
+                        </button>
+                    </div>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <h4>Next Billing Date</h4>
+                        <p class="setting-description">November 23, 2025</p>
+                    </div>
+                    <div class="setting-action">
+                        <button class="btn btn-secondary btn-sm" onclick="viewInvoices()">
+                            View Invoices
+                        </button>
+                    </div>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <h4>Payment Method</h4>
+                        <p class="setting-description">•••• 4242</p>
+                    </div>
+                    <div class="setting-action">
+                        <button class="btn btn-secondary btn-sm" onclick="updatePaymentMethod()">
+                            Update
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API & Developer -->
+            <div class="settings-section">
+                <h3>👨‍💻 API & Developer Settings</h3>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <h4>API Key</h4>
+                        <p class="setting-description">mk_live_********************************</p>
+                    </div>
+                    <div class="setting-action">
+                        <button class="btn btn-secondary btn-sm" onclick="viewApiKey()">
+                            Show
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="regenerateApiKey()">
+                            Regenerate
+                        </button>
+                    </div>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <h4>Webhook URL</h4>
+                        <p class="setting-description">http://localhost:3000/webhook</p>
+                    </div>
+                    <div class="setting-action">
+                        <button class="btn btn-secondary btn-sm" onclick="editWebhook()">
+                            Edit
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="testWebhook()">
+                            Test
+                        </button>
+                    </div>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <h4>API Documentation</h4>
+                        <p class="setting-description">View complete API reference</p>
+                    </div>
+                    <div class="setting-action">
+                        <button class="btn btn-secondary btn-sm" onclick="viewApiDocs()">
+                            View Docs
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security -->
+            <div class="settings-section">
+                <h3>🔒 Security</h3>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <h4>Password</h4>
+                        <p class="setting-description">Last changed 3 months ago</p>
+                    </div>
+                    <div class="setting-action">
+                        <button class="btn btn-secondary btn-sm" onclick="changePassword()">
+                            Change Password
+                        </button>
+                    </div>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <h4>Two-Factor Authentication</h4>
+                        <p class="setting-description">Add an extra layer of security</p>
+                    </div>
+                    <div class="setting-action">
+                        <button class="btn btn-primary btn-sm" onclick="enable2FA()">
+                            Enable 2FA
+                        </button>
+                    </div>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <h4>Active Sessions</h4>
+                        <p class="setting-description">Manage your login sessions</p>
+                    </div>
+                    <div class="setting-action">
+                        <button class="btn btn-secondary btn-sm" onclick="viewSessions()">
+                            View Sessions
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="danger-zone">
+                <h3>⚠️ Danger Zone</h3>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <h4>Export All Data</h4>
+                        <p class="setting-description">Download all your business data</p>
+                    </div>
+                    <div class="setting-action">
+                        <button class="btn btn-secondary btn-sm" onclick="exportData()">
+                            Export Data
+                        </button>
+                    </div>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <h4>Close Account</h4>
+                        <p class="setting-description">Permanently delete your account and all data</p>
+                    </div>
+                    <div class="setting-action">
+                        <button class="btn btn-danger btn-sm" onclick="closeAccount()">
+                            Close Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = window.API_BASE || 'http://localhost:4000';
+        let userData = null;
+
+        // Check authentication
+        if (sessionStorage.getItem('authenticated') !== 'true') {
+            window.location.href = '../index.html';
+        }
+
+        userData = JSON.parse(sessionStorage.getItem('user'));
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserInfo();
+        });
+
+        function loadUserInfo() {
+            if (userData) {
+                document.getElementById('userName').textContent = userData.name;
+                // Logo is now static HTML, no need to update
+                document.getElementById('businessNameSetting').textContent = 'doclittle';
+                const initials = userData.name.split(' ').map(n => n[0]).join('');
+                document.getElementById('userAvatar').textContent = initials;
+            }
+        }
+
+        // Business Information
+        function editBusinessName() {
+            const newName = prompt('Enter new business name:', 'VitaminCo');
+            if (newName) {
+                alert('Business name updated!\n\nIn production, this would update your business name across the platform.');
+                document.getElementById('businessNameSetting').textContent = newName;
+            }
+        }
+
+        function editEmail() {
+            const newEmail = prompt('Enter new email address:', 'owner@vitamins.com');
+            if (newEmail) {
+                alert('Email updated!\n\nIn production, we would send a verification email.');
+                document.getElementById('businessEmail').textContent = newEmail;
+            }
+        }
+
+        function editPhone() {
+            const newPhone = prompt('Enter new phone number:', '+1 (862) 230-7479');
+            if (newPhone) {
+                alert('Phone number updated!');
+            }
+        }
+
+        // Connected Services
+        function manageStripe() {
+            alert('💳 Stripe Settings\n\nIn production, this would show:\n\n• Connected account details\n• Payout schedule\n• Transaction fees\n• Disconnect option\n• View Stripe dashboard');
+        }
+
+        function manageTwilio() {
+            alert('📱 Twilio Settings\n\nIn production, this would show:\n\n• Phone numbers\n• SMS usage\n• Billing details\n• Message templates\n• Disconnect option');
+        }
+
+        function connectShopify() {
+            alert('🛍️ Connect Shopify\n\nIn production, this would:\n\n1. Open Shopify OAuth\n2. Request permissions\n3. Import products\n4. Sync inventory\n5. Enable auto-sync');
+        }
+
+        // Notifications
+        function toggleNotification(type) {
+            alert(`Notification settings updated for: ${type}`);
+        }
+
+        // Billing
+        function viewPlans() {
+            alert('💰 Subscription Plans\n\n📦 Basic - $99/month\n• Up to 1,000 calls\n• Basic support\n\n🚀 Pro - $299/month (Current)\n• Up to 10,000 calls\n• Priority support\n• Advanced analytics\n\n⭐ Enterprise - Custom\n• Unlimited calls\n• Dedicated support\n• Custom integration');
+        }
+
+        function viewInvoices() {
+            alert('📄 Invoices\n\nIn production, this would show:\n\n• All past invoices\n• Payment history\n• Download PDFs\n• Tax information');
+        }
+
+        function updatePaymentMethod() {
+            alert('💳 Update Payment Method\n\nIn production, this would open Stripe checkout to:\n\n• Add new card\n• Update billing address\n• Set default payment method');
+        }
+
+        // API & Developer
+        function viewApiKey() {
+            const confirmed = confirm('⚠️ Your API key will be visible. Only share this with trusted developers.\n\nShow API key?');
+            if (confirmed) {
+                alert('🔑 API Key:\n\nmk_live_' + userData.merchant_id);
+            }
+        }
+
+        function regenerateApiKey() {
+            const confirmed = confirm('⚠️ Warning: This will invalidate your current API key.\n\nAll applications using the old key will stop working.\n\nContinue?');
+            if (confirmed) {
+                alert('✅ New API key generated!\n\nYour old key has been revoked. Update your applications with the new key.');
+            }
+        }
+
+        function editWebhook() {
+            const newUrl = prompt('Enter webhook URL:', 'http://localhost:3000/webhook');
+            if (newUrl) {
+                alert('Webhook URL updated!\n\nMake sure your endpoint is ready to receive events.');
+            }
+        }
+
+        function testWebhook() {
+            alert('🧪 Testing webhook...\n\nSending test event to your endpoint.\n\nCheck your server logs for the test payload.');
+        }
+
+        function viewApiDocs() {
+            window.open('https://docs.yourplatform.com', '_blank');
+        }
+
+        // Security
+        function changePassword() {
+            alert('🔒 Change Password\n\nIn production, this would:\n\n1. Verify current password\n2. Enter new password\n3. Confirm new password\n4. Send confirmation email\n5. Log out other sessions');
+        }
+
+        function enable2FA() {
+            alert('🔐 Enable Two-Factor Authentication\n\nIn production, this would:\n\n1. Show QR code\n2. Scan with authenticator app\n3. Enter verification code\n4. Generate backup codes\n5. Enable 2FA');
+        }
+
+        function viewSessions() {
+            alert('📱 Active Sessions\n\nIn production, this would show:\n\n• Current session (this device)\n• Chrome on MacBook - Last active now\n• Safari on iPhone - Last active 2h ago\n\n[Log out other sessions]');
+        }
+
+        // Danger Zone
+        function exportData() {
+            const confirmed = confirm('📦 Export All Data\n\nThis will create a downloadable archive containing:\n\n• All orders\n• Customer data\n• Product catalog\n• Transaction history\n• Call logs\n\nContinue?');
+            if (confirmed) {
+                alert('✅ Data export started!\n\nYou\'ll receive an email with a download link when ready (usually within 5 minutes).');
+            }
+        }
+
+        function closeAccount() {
+            const confirmed = confirm('⚠️ DANGER: Close Account\n\nThis will PERMANENTLY delete:\n\n• Your business account\n• All orders and data\n• Customer information\n• Call history\n• Everything\n\nThis CANNOT be undone!\n\nAre you absolutely sure?');
+
+            if (confirmed) {
+                const finalConfirm = prompt('Type "DELETE FOREVER" to confirm:', '');
+                if (finalConfirm === 'DELETE FOREVER') {
+                    alert('Account closed.\n\nWe\'re sorry to see you go. You\'ll receive a final data export via email.');
+                    logout();
+                }
+            }
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = '../index.html';
+        }
+    </script>
+</body>
+
+</html>

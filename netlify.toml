@@ -1,0 +1,13 @@
+# Netlify Configuration
+[build]
+  publish = "unified-dashboard"
+  command = "echo 'No build needed'"
+
+# Environment variables (set in Netlify dashboard)
+# API_BASE will be set in Netlify dashboard after Railway deployment
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
