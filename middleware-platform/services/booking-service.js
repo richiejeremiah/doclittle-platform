@@ -8,7 +8,6 @@
 const { google } = require('googleapis');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../database');
-const EmailService = require('./email-service');
 const FHIRService = require('./fhir-service');
 const EmailService = require('./email-service');
 
