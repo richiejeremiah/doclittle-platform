@@ -233,14 +233,73 @@
             color: var(--danger);
         }
 
-        /* Helpline Status Banner */
+        /* Helpline Status Banner - Enhanced with Demo Highlight */
         .helpline-status-banner {
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             border-radius: 12px;
             padding: 24px;
             margin-bottom: 32px;
             color: white;
-            box-shadow: var(--shadow-xl);
+            box-shadow: 0 8px 32px rgba(8, 145, 178, 0.3), 0 0 0 3px rgba(8, 145, 178, 0.1);
+            position: relative;
+            overflow: hidden;
+            animation: pulseHighlight 3s ease-in-out infinite;
+        }
+
+        .helpline-status-banner::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            animation: shimmer 4s linear infinite;
+        }
+
+        @keyframes pulseHighlight {
+            0%, 100% {
+                box-shadow: 0 8px 32px rgba(8, 145, 178, 0.3), 0 0 0 3px rgba(8, 145, 178, 0.1);
+            }
+            50% {
+                box-shadow: 0 8px 40px rgba(8, 145, 178, 0.5), 0 0 0 4px rgba(8, 145, 178, 0.2);
+            }
+        }
+
+        @keyframes shimmer {
+            0% {
+        transform: translateX(-100%) translateY(-100%) rotate(0deg);
+            }
+            100% {
+        transform: translateX(100%) translateY(100%) rotate(360deg);
+            }
+        }
+
+        .demo-badge {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            animation: badgePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes badgePulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 0.9;
+            }
         }
 
         .helpline-status-header {
@@ -597,8 +656,9 @@
                 </div>
             </div>
 
-            <!-- Next Appointment Banner -->
+            <!-- Next Appointment Banner - Enhanced with Demo Highlight -->
             <div class="helpline-status-banner" id="nextApptCard">
+                <div class="demo-badge">⭐ UPCOMING</div>
                 <div class="helpline-status-header">
                     <div>
                         <div class="helpline-status-title">📅 Next Appointment</div>
