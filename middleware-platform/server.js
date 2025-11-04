@@ -1962,8 +1962,13 @@ app.listen(PORT, () => {
   console.log('✅ Ready to accept requests!');
   console.log('='.repeat(60) + '\n');
 
-  // Start reminder scheduler
-  ReminderScheduler.start();
+  // Start reminder scheduler (with error handling)
+  try {
+    ReminderScheduler.start();
+  } catch (error) {
+    console.error('⚠️  Failed to start reminder scheduler:', error.message);
+    console.log('   Reminders will be disabled, but server will continue');
+  }
 
   console.log('⚙️  Configuration Status:');
   console.log(`   Database:      ✅ Using database.js module`);

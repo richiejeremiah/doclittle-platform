@@ -60,7 +60,7 @@ class ReminderScheduler {
       const allAppointments = db.getAllAppointments({});
       const appointmentsNeedingReminders = allAppointments.filter(appt => {
         // Must be scheduled or confirmed
-        if (!['scheduled', 'confirmed'].includes(appt.status)) return false;
+        if (!appt.status || !['scheduled', 'confirmed'].includes(appt.status)) return false;
 
         // Must have email
         if (!appt.patient_email) return false;
