@@ -923,14 +923,22 @@
             const patientEl = document.getElementById('nextApptPatient');
             const typeEl = document.getElementById('nextApptType');
             const provEl = document.getElementById('nextApptProvider');
+            const card = document.getElementById('nextApptCard');
+            const badge = card ? card.querySelector('.demo-badge') : null;
+
             if (!appt) {
                 whenEl.textContent = 'No upcoming appointment';
                 patientEl.textContent = '—';
                 typeEl.textContent = '—';
                 provEl.textContent = '—';
                 window.__nextApptLink = null;
+                if (badge) badge.textContent = 'No Appointments';
                 return;
             }
+
+            // Update badge to show it's active
+            if (badge) badge.textContent = '⭐ UPCOMING';
+            
             const when = new Date(appt.start_time || `${appt.date}T${appt.time}:00`).toLocaleString();
             whenEl.textContent = when;
             patientEl.textContent = `${appt.patient_name || 'Unknown'}${appt.patient_phone ? ' · ' + appt.patient_phone : ''}`;
