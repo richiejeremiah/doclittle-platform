@@ -1,0 +1,78 @@
+{
+  "type": "function",
+  "name": "collect_insurance",
+  "description": "Collect and validate patient insurance information during a voice call. Call this function when the patient provides their insurance company name and member ID. The function will validate the insurance provider, handle multiple matches if needed, and store the insurance information in the patient's record.",
+  "function_url": "https://your-domain.com/voice/insurance/collect",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "payer_name": {
+        "type": "string",
+        "description": "The name of the insurance company provided by the patient. Examples: 'Blue Cross Blue Shield', 'Aetna', 'UnitedHealthcare', 'Cigna', 'Humana', 'Medicare', 'Medicaid'. Use exactly what the patient says, even if abbreviated."
+      },
+      "member_id": {
+        "type": "string",
+        "description": "The patient's insurance member ID number. This is typically an alphanumeric code found on their insurance card. Examples: '123456789', 'ABC123456', 'MEM-789456'."
+      },
+      "patient_phone": {
+        "type": "string",
+        "description": "The patient's phone number from the call metadata. This is used to link the insurance information to the patient's record. Format: '+15551234567'"
+      },
+      "patient_id": {
+        "type": "string",
+        "description": "Optional: The patient's FHIR resource ID if already known. This is preferred over phone number for linking insurance."
+      },
+      "group_number": {
+        "type": "string",
+        "description": "Optional: The insurance group number if the patient provides it. Not required for basic validation."
+      },
+      "plan_name": {
+        "type": "string",
+        "description": "Optional: The specific insurance plan name if the patient provides it. Examples: 'Gold Plan', 'PPO', 'HMO'."
+      }
+    },
+    "required": ["payer_name", "member_id"]
+  },
+  "response": {
+    "type": "object",
+    "properties": {
+      "success": {
+        "type": "boolean",
+        "description": "Whether the insurance collection was successful"
+      },
+      "confirmed": {
+        "type": "boolean",
+        "description": "Whether the insurance was confirmed (true) or needs patient confirmation (false)"
+      },
+      "multipleMatches": {
+        "type": "boolean",
+        "description": "If true, there are multiple insurance providers matching the name. The agent should ask the patient to confirm which one."
+      },
+      "suggestions": {
+        "type": "array",
+        "description": "Array of matching insurance providers when multipleMatches is true. Each item has payer_id and payer_name."
+      },
+      "payer_id": {
+        "type": "string",
+        "description": "The confirmed payer ID (only present when confirmed=true)"
+      },
+      "payer_name": {
+        "type": "string",
+        "description": "The confirmed payer name (only present when confirmed=true)"
+      },
+      "member_id": {
+        "type": "string",
+        "description": "The patient's member ID"
+      },
+      "message": {
+        "type": "string",
+        "description": "A message describing the result, suitable for the agent to read to the patient"
+      },
+      "error": {
+        "type": "string",
+        "description": "Error message if success=false"
+      }
+    }
+  }
+}
+

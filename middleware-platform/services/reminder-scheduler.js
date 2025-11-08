@@ -53,33 +53,49 @@ class ReminderScheduler {
   static async checkAndSendReminders() {
     try {
       const now = new Date();
-      const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
-      const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes buffer
+      console.log(`\n⏰ Reminder Scheduler Check: ${now.toISOString()}`);
 
       // Get all upcoming appointments in the next hour
       const allAppointments = db.getAllAppointments({});
+      console.log(`📋 Total appointments in database: ${allAppointments.length}`);
+
       const appointmentsNeedingReminders = allAppointments.filter(appt => {
         // Must be scheduled or confirmed
-        if (!appt.status || !['scheduled', 'confirmed'].includes(appt.status)) return false;
+        if (!appt.status || !['scheduled', 'confirmed'].includes(appt.status)) {
+          return false;
+        }
 
         // Must have email
-        if (!appt.patient_email) return false;
+        if (!appt.patient_email) {
+          return false;
+        }
 
         // Must not have reminder sent already
-        if (appt.reminder_sent) return false;
+        if (appt.reminder_sent) {
+          return false;
+        }
 
         // Must have start_time
-        if (!appt.start_time) return false;
+        if (!appt.start_time) {
+          return false;
+        }
 
         const startTime = new Date(appt.start_time);
         const timeUntil = startTime.getTime() - now.getTime();
+        const minutesUntil = Math.floor(timeUntil / (60 * 1000));
 
         // Check if appointment is between 55 minutes and 65 minutes away
         // (5-minute window to account for scheduler timing)
-        return timeUntil >= 55 * 60 * 1000 && timeUntil <= 65 * 60 * 1000;
+        const needsReminder = timeUntil >= 55 * 60 * 1000 && timeUntil <= 65 * 60 * 1000;
+
+        if (needsReminder) {
+          console.log(`   📅 Found: ${appt.patient_name} - ${appt.date} at ${appt.time} (${minutesUntil} minutes away)`);
+        }
+
+        return needsReminder;
       });
 
-      console.log(`\n📧 Reminder Check: Found ${appointmentsNeedingReminders.length} appointments needing reminders`);
+      console.log(`📧 Reminder Check: Found ${appointmentsNeedingReminders.length} appointments needing reminders`);
 
       for (const appt of appointmentsNeedingReminders) {
         try {
@@ -89,13 +105,17 @@ class ReminderScheduler {
           if (result.success) {
             // Mark reminder as sent
             db.markReminderSent(appt.id);
-            console.log(`✅ Reminder sent to ${appt.patient_email}`);
+            console.log(`✅ Reminder sent to ${appt.patient_email} for appointment on ${appt.date} at ${appt.time}`);
           } else {
-            console.error(`❌ Failed to send reminder: ${result.error}`);
+            console.error(`❌ Failed to send reminder to ${appt.patient_email}: ${result.error}`);
           }
         } catch (error) {
           console.error(`❌ Error sending reminder for ${appt.id}:`, error.message);
         }
+      }
+
+      if (appointmentsNeedingReminders.length === 0) {
+        console.log('   ℹ️  No appointments needing reminders at this time');
       }
 
     } catch (error) {

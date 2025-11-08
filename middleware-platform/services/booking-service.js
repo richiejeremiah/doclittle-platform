@@ -613,6 +613,8 @@ Rescheduled from: ${appointment.date} at ${appointment.time}
         timezone: requestedTimezone,
         appointment_type: appointmentType || 'Mental Health Consultation',
         available_slots: availableSlots,
+        // Alias for consumers expecting `slots`
+        slots: availableSlots,
         total_slots: allSlots.length,
         booked_slots: bookedSlots.length,
         slot_duration_minutes: typeConfig.duration_minutes,
@@ -854,18 +856,30 @@ Appointment ID: ${appointment.id}
     }
 
     // Check if within business hours
+    // Note: We check the appointment end time (without buffer after) against business hours
+    // Buffer after can extend slightly past business hours, but the appointment itself must end by 17:00
     const businessStart = new Date(slotStart);
     businessStart.setHours(BUSINESS_HOURS.start, 0, 0, 0);
     
     const businessEnd = new Date(slotStart);
-    businessEnd.setHours(BUSINESS_HOURS.end, 0, 0, 0);
+    businessEnd.setHours(BUSINESS_HOURS.end, 0, 0, 0); // 17:00
 
-    const totalSlotMinutes = typeConfig.duration_minutes + 
-                            typeConfig.buffer_before_minutes + 
-                            typeConfig.buffer_after_minutes;
-    const slotEndWithBuffers = new Date(slotStart.getTime() + totalSlotMinutes * 60 * 1000);
+    // Calculate appointment end time (without buffer after)
+    // slotStart is the actual appointment start time (after buffer before)
+    // So we only need to add the appointment duration
+    const appointmentEndTime = new Date(slotStart.getTime() + typeConfig.duration_minutes * 60 * 1000);
 
-    if (slotStart < businessStart || slotEndWithBuffers > businessEnd) {
+    // Check if appointment start is before business hours
+    if (slotStart < businessStart) {
+      return {
+        available: false,
+        reason: `Time slot is outside business hours (${BUSINESS_HOURS.start}:00 - ${BUSINESS_HOURS.end}:00)`
+      };
+    }
+
+    // Check if appointment end (without buffer after) is after business hours
+    // Allow appointments that end exactly at or before 17:00
+    if (appointmentEndTime > businessEnd) {
       return {
         available: false,
         reason: `Time slot is outside business hours (${BUSINESS_HOURS.start}:00 - ${BUSINESS_HOURS.end}:00)`

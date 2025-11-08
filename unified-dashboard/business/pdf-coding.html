@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Medical Coding - doclittle- AI Voice Receptionist</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Left Sidebar */
+        .sidebar {
+            width: 280px;
+            background: #1e293b;
+            color: white;
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 32px;
+            color: #60a5fa;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            color: #cbd5e1;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover {
+            background: #334155;
+            color: white;
+        }
+
+        .nav-item.active {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: white;
+            padding: 24px;
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        /* Content Area */
+        .content-area {
+            flex: 1;
+            display: flex;
+            gap: 24px;
+            padding: 24px;
+            overflow: hidden;
+        }
+
+        /* PDF Viewer Section */
+        .pdf-section {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .pdf-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .upload-area {
+            padding: 24px;
+            text-align: center;
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            margin: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .upload-area:hover {
+            border-color: #3b82f6;
+            background: #f0f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .upload-text {
+            font-size: 16px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .upload-hint {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .pdf-viewer {
+            flex: 1;
+            overflow: hidden;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #pdfCanvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        #overlayCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        #extractedTextContent {
+            font-size: 12px;
+            line-height: 1.8;
+        }
+
+        .extracted-text-line {
+            margin-bottom: 8px;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .extracted-text-line:hover {
+            background: #f1f5f9;
+        }
+
+        .extracted-text-line.highlight-icd10 {
+            background: #dbeafe;
+            border-left: 3px solid #3b82f6;
+        }
+
+        .extracted-text-line.highlight-cpt {
+            background: #dcfce7;
+            border-left: 3px solid #10b981;
+        }
+
+        .extracted-text-line.highlight-both {
+            background: #fef3c7;
+            border-left: 3px solid #f59e0b;
+        }
+
+        .extracted-text-line.match-highlight {
+            font-weight: 600;
+            color: #1e40af;
+        }
+
+        /* Codes Panel */
+        .codes-panel {
+            width: 400px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .codes-header {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        .codes-header h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .codes-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .coding-band {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .band-simple {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .band-moderate {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .band-complex {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .codes-section {
+            margin-bottom: 24px;
+        }
+
+        .codes-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .code-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .code-value {
+            font-weight: 700;
+            font-size: 16px;
+            color: #1e293b;
+        }
+
+        .code-description {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+
+        .error {
+            background: #fee2e2;
+            border: 1px solid #fca5a5;
+            color: #991b1b;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">DocLittle.</div>
+            <div style="font-size: 12px; color: #94a3b8; margin-bottom: 24px;">AI Voice Receptionist</div>
+            
+            <a href="dashboard.html" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span>Dashboard</span>
+            </a>
+            <a href="patients.html" class="nav-item">
+                <span class="nav-icon">👥</span>
+                <span>Clients</span>
+            </a>
+            <a href="calendar.html" class="nav-item">
+                <span class="nav-icon">📅</span>
+                <span>Calendar</span>
+            </a>
+            <a href="billing.html" class="nav-item">
+                <span class="nav-icon">🧾</span>
+                <span>Billing</span>
+            </a>
+            <a href="pdf-coding.html" class="nav-item active">
+                <span class="nav-icon">📄</span>
+                <span>PDF Coding</span>
+            </a>
+            <a href="agent.html" class="nav-item">
+                <span class="nav-icon">🎙️</span>
+                <span>Voice Agent</span>
+            </a>
+            <a href="treatments.html" class="nav-item">
+                <span class="nav-icon">💊</span>
+                <span>Knowledge Base</span>
+            </a>
+            <a href="settings.html" class="nav-item">
+                <span class="nav-icon">⚙️</span>
+                <span>Settings</span>
+            </a>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="header">
+                <h1>📄 PDF Medical Coding</h1>
+                <p>Upload a PDF report to extract medical codes (ICD-10 and CPT)</p>
+            </div>
+
+            <div class="content-area">
+                <!-- PDF Section -->
+                <div class="pdf-section">
+                    <div class="pdf-header">
+                        <div>
+                            <strong id="fileName">No PDF loaded</strong>
+                            <div id="fileInfo" style="font-size: 12px; color: #64748b; margin-top: 4px;"></div>
+                        </div>
+                        <button id="uploadBtn" class="btn btn-primary" style="padding: 8px 16px; border: none; border-radius: 6px; background: #3b82f6; color: white; cursor: pointer;">Upload PDF</button>
+                    </div>
+
+                    <div id="uploadArea" class="upload-area">
+                        <div class="upload-icon">📄</div>
+                        <div class="upload-text">Drop PDF file here or click to upload</div>
+                        <div class="upload-hint">Supports PDF files up to 10MB</div>
+                        <input type="file" id="fileInput" accept=".pdf" />
+                    </div>
+
+                    <div id="pdfViewer" class="pdf-viewer" style="display: none;">
+                        <div style="display: flex; gap: 16px; height: 100%;">
+                            <!-- PDF Canvas Container -->
+                            <div id="pdfContainer" style="flex: 1; position: relative; overflow: auto; background: #f8fafc; border-radius: 8px; padding: 16px;">
+                                <div id="pdfCanvasWrapper" style="position: relative; display: inline-block; margin: 0 auto;">
+                                    <canvas id="pdfCanvas"></canvas>
+                                    <canvas id="overlayCanvas" style="position: absolute; top: 0; left: 0; pointer-events: none; display: none;"></canvas>
+                                </div>
+                                <!-- Page Navigation -->
+                                <div style="text-align: center; margin-top: 16px; padding: 12px;">
+                                    <button id="prevPage" style="padding: 8px 16px; margin: 0 8px; border: 1px solid #e2e8f0; border-radius: 6px; background: white; cursor: pointer;">Previous</button>
+                                    <span id="pageInfo" style="margin: 0 16px; color: #64748b;">Page 1 of 1</span>
+                                    <button id="nextPage" style="padding: 8px 16px; margin: 0 8px; border: 1px solid #e2e8f0; border-radius: 6px; background: white; cursor: pointer;">Next</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Extracted Text Overlay Panel -->
+                            <div id="textOverlayPanel" style="width: 300px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; overflow-y: auto; max-height: 100%;">
+                                <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #64748b;">Extracted Text</h3>
+                                <div id="extractedTextContent" style="font-size: 12px; line-height: 1.6; color: #1e293b;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="loading" class="loading" style="display: none;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+                        <div>Processing PDF and extracting codes...</div>
+                    </div>
+
+                    <div id="error" class="error" style="display: none;"></div>
+                </div>
+
+                <!-- Codes Panel -->
+                <div class="codes-panel">
+                    <div class="codes-header">
+                        <h2>Medical Codes</h2>
+                        <div id="codingBand" style="display: none;"></div>
+                    </div>
+
+                    <div class="codes-content">
+                        <!-- ICD-10 Codes -->
+                        <div class="codes-section">
+                            <h3>Diagnoses (ICD-10)</h3>
+                            <div id="icd10Codes">
+                                <div style="color: #94a3b8; font-size: 14px; text-align: center; padding: 20px;">
+                                    No codes extracted yet
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CPT Codes -->
+                        <div class="codes-section">
+                            <h3>Procedures (CPT)</h3>
+                            <div id="cptCodes">
+                                <div style="color: #94a3b8; font-size: 14px; text-align: center; padding: 20px;">
+                                    No codes extracted yet
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF.js for rendering and text highlighting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        const API_BASE = window.API_BASE || 'http://localhost:4000';
+        let currentPDFData = null;
+        let currentPDFText = '';
+        let pdfDoc = null;
+        let currentPage = 1;
+        let pdfScale = 1.5;
+        let textMatches = [];
+        let pdfjsLib = null;
+
+        // Wait for DOM and PDF.js to load
+        function initializeApp() {
+            // Check if PDF.js is loaded - try both window.pdfjsLib and pdfjsLib
+            if (typeof window.pdfjsLib === 'undefined' && typeof pdfjsLib === 'undefined') {
+                console.error('PDF.js failed to load');
+                const errorEl = document.getElementById('error');
+                if (errorEl) {
+                    errorEl.textContent = 'Error: PDF.js library failed to load. Please refresh the page.';
+                    errorEl.style.display = 'block';
+                }
+                return;
+            }
+
+            // Use window.pdfjsLib if available (from CDN), otherwise use pdfjsLib
+            if (typeof window.pdfjsLib !== 'undefined' && !pdfjsLib) {
+                pdfjsLib = window.pdfjsLib;
+            }
+
+            // Configure PDF.js worker
+            if (pdfjsLib) {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            }
+
+            // Get DOM elements
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const pdfViewer = document.getElementById('pdfViewer');
+            const pdfFrame = document.getElementById('pdfFrame');
+            const pdfTextOverlay = document.getElementById('pdfTextOverlay');
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+
+            if (!uploadArea || !fileInput || !uploadBtn || !pdfViewer) {
+                console.error('Required DOM elements not found');
+                return;
+            }
+        
+            // Create canvas for PDF rendering
+            const pdfCanvas = document.createElement('canvas');
+            pdfCanvas.id = 'pdfCanvas';
+            pdfCanvas.style.width = '100%';
+            pdfCanvas.style.height = 'auto';
+            pdfCanvas.style.border = '1px solid #e2e8f0';
+            pdfCanvas.style.borderRadius = '8px';
+        
+            // Create overlay canvas for highlights
+            const overlayCanvas = document.createElement('canvas');
+            overlayCanvas.id = 'overlayCanvas';
+            overlayCanvas.style.position = 'absolute';
+            overlayCanvas.style.top = '0';
+            overlayCanvas.style.left = '0';
+            overlayCanvas.style.pointerEvents = 'none';
+            overlayCanvas.style.display = 'none'; // Hidden as per user request
+        
+            // Container for PDF rendering
+            const pdfContainer = document.createElement('div');
+            pdfContainer.style.position = 'relative';
+            pdfContainer.style.display = 'inline-block';
+            pdfContainer.style.width = '100%';
+
+            pdfContainer.appendChild(pdfCanvas);
+            pdfContainer.appendChild(overlayCanvas);
+            pdfTextOverlay.appendChild(pdfContainer);
+
+            uploadBtn.addEventListener('click', () => fileInput.click());
+            uploadArea.addEventListener('click', () => fileInput.click());
+
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0 && files[0].type === 'application/pdf') {
+                    handleFileUpload(files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFileUpload(e.target.files[0]);
+                }
+            });
+
+            // Set up page navigation
+            setupPageNavigation();
+
+            console.log('PDF Coding page initialized successfully');
+        }
+
+        // Initialize when DOM and PDF.js are ready
+        function waitForPDFJS() {
+            if (typeof window.pdfjsLib !== 'undefined') {
+                pdfjsLib = window.pdfjsLib;
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', initializeApp);
+                } else {
+                    initializeApp();
+                }
+            } else {
+                // Wait a bit longer for CDN to load
+                setTimeout(waitForPDFJS, 100);
+            }
+        }
+
+        // Start waiting for PDF.js
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', waitForPDFJS);
+        } else {
+            waitForPDFJS();
+        }
+
+        // Fallback: also try on window load
+        window.addEventListener('load', () => {
+            if (typeof window.pdfjsLib !== 'undefined' && !pdfjsLib) {
+                pdfjsLib = window.pdfjsLib;
+                if (!pdfDoc) {
+                    initializeApp();
+                }
+            }
+        });
+
+        async function handleFileUpload(file) {
+            if (!pdfjsLib) {
+                showError('PDF.js library not loaded. Please refresh the page.');
+                return;
+            }
+
+            if (file.type !== 'application/pdf') {
+                showError('Please upload a PDF file');
+                return;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                showError('File size must be less than 10MB');
+                return;
+            }
+
+            // Show loading
+            const loading = document.getElementById('loading');
+            const uploadArea = document.getElementById('uploadArea');
+            const pdfViewer = document.getElementById('pdfViewer');
+            const error = document.getElementById('error');
+
+            loading.style.display = 'block';
+            uploadArea.style.display = 'none';
+            pdfViewer.style.display = 'none';
+            error.style.display = 'none';
+
+            // Update file info
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileInfo').textContent = `${(file.size / 1024).toFixed(2)} KB`;
+
+            try {
+                // First, load PDF for rendering
+                const arrayBuffer = await file.arrayBuffer();
+                pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                currentPage = 1;
+
+                // Create FormData for processing
+                const formData = new FormData();
+                formData.append('pdf', file);
+
+                // Upload and process PDF
+                const response = await fetch(`${API_BASE}/api/pdf-coding/process`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Failed to process PDF');
+                }
+
+                // Store result
+                currentPDFData = result;
+                currentPDFText = result.extractedText;
+
+                // Render PDF with highlights
+                await renderPDFWithHighlights(result);
+
+                // Display extracted text in overlay panel
+                displayExtractedText(result.textLines, result.coding);
+
+                // Display codes
+                displayCodes(result.coding, result.pricing);
+
+                // Show PDF viewer
+                loading.style.display = 'none';
+                pdfViewer.style.display = 'flex';
+                uploadArea.style.display = 'none';
+
+            } catch (err) {
+                console.error('Error processing PDF:', err);
+                showError(err.message || 'Failed to process PDF');
+                const loading = document.getElementById('loading');
+                const uploadArea = document.getElementById('uploadArea');
+                loading.style.display = 'none';
+                uploadArea.style.display = 'block';
+            }
+        }
+
+        async function renderPDFWithHighlights(result) {
+            const page = await pdfDoc.getPage(currentPage);
+            const viewport = page.getViewport({ scale: pdfScale });
+            
+            const canvas = document.getElementById('pdfCanvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            // Render PDF page (no highlighting on PDF - only in extracted text panel)
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+
+            // Clear overlay canvas (no PDF highlighting)
+            const overlay = document.getElementById('overlayCanvas');
+            overlay.height = viewport.height;
+            overlay.width = viewport.width;
+            const overlayCtx = overlay.getContext('2d');
+            overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
+
+            // Update page info
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${pdfDoc.numPages}`;
+            document.getElementById('prevPage').disabled = currentPage <= 1;
+            document.getElementById('nextPage').disabled = currentPage >= pdfDoc.numPages;
+        }
+
+        // Page navigation handlers (set up after DOM loads)
+        function setupPageNavigation() {
+            const prevBtn = document.getElementById('prevPage');
+            const nextBtn = document.getElementById('nextPage');
+            
+            if (prevBtn) {
+                prevBtn.addEventListener('click', async () => {
+                    if (pdfDoc && currentPage > 1) {
+                        currentPage--;
+                        await renderPDFWithHighlights(currentPDFData);
+                    }
+                });
+            }
+            
+            if (nextBtn) {
+                nextBtn.addEventListener('click', async () => {
+                    if (pdfDoc && currentPage < pdfDoc.numPages) {
+                        currentPage++;
+                        await renderPDFWithHighlights(currentPDFData);
+                    }
+                });
+            }
+        }
+
+        // Set up navigation when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupPageNavigation);
+        } else {
+            setupPageNavigation();
+        }
+
+        function displayExtractedText(textLines, coding) {
+            const extractedTextDiv = document.getElementById('extractedTextContent');
+            
+            // Create search terms map - ONLY exact codes and key procedure/diagnosis terms
+            const searchTerms = new Map();
+            const exactCodes = new Set(); // For exact code matches
+            
+            // Add ICD-10 codes (exact matches only)
+            if (coding.icd10 && coding.icd10.length > 0) {
+                coding.icd10.forEach(icd => {
+                    const code = (icd.code || icd).toString().toLowerCase();
+                    exactCodes.add(code);
+                    searchTerms.set(code, 'icd10');
+                });
+            }
+            
+            // Add CPT codes (exact matches only)
+            if (coding.cpt && coding.cpt.length > 0) {
+                coding.cpt.forEach(cpt => {
+                    const code = (cpt.code || cpt).toString().toLowerCase();
+                    exactCodes.add(code);
+                    searchTerms.set(code, 'cpt');
+                });
+            }
+            
+            // Extract ONLY key procedure/diagnosis terms from code descriptions (no generic words)
+            const keyTerms = new Set();
+            if (coding.icd10) {
+                coding.icd10.forEach(icd => {
+                    if (icd.description) {
+                        // Only extract very specific medical terms (6+ chars, not common words)
+                        const skipWords = new Set(['disorder', 'disease', 'syndrome', 'condition', 'patient', 'with', 'without']);
+                        icd.description.split(/[\s,.-]+/).forEach(word => {
+                            const clean = word.trim().toLowerCase();
+                            if (clean.length >= 6 && !skipWords.has(clean) && /^[a-z]+$/.test(clean)) {
+                                keyTerms.add({ term: clean, type: 'icd10' });
+                            }
+                        });
+                    }
+                });
+            }
+            
+            if (coding.cpt) {
+                coding.cpt.forEach(cpt => {
+                    if (cpt.description) {
+                        // Extract key procedure terms (specific medical procedures only)
+                        const skipWords = new Set(['with', 'patient', 'when', 'performed', 'during', 'includes', 'real', 'time', 'image', 'documentation']);
+                        const desc = cpt.description.toLowerCase();
+                        
+                        // Look for specific procedure keywords
+                        if (desc.includes('echocardiogram')) keyTerms.add({ term: 'echocardiogram', type: 'cpt' });
+                        if (desc.includes('transthoracic')) keyTerms.add({ term: 'transthoracic', type: 'cpt' });
+                        if (desc.includes('psychotherapy')) keyTerms.add({ term: 'psychotherapy', type: 'cpt' });
+                        if (desc.includes('cognitive')) keyTerms.add({ term: 'cognitive', type: 'cpt' });
+                        if (desc.includes('behavioral')) keyTerms.add({ term: 'behavioral', type: 'cpt' });
+                        
+                        desc.split(/[\s,.-]+/).forEach(word => {
+                            const clean = word.trim().toLowerCase();
+                            if (clean.length >= 8 && !skipWords.has(clean) && /^[a-z]+$/.test(clean)) {
+                                keyTerms.add({ term: clean, type: 'cpt' });
+                            }
+                        });
+                    }
+                });
+            }
+
+            extractedTextDiv.innerHTML = textLines.map(line => {
+                let classes = 'extracted-text-line';
+                const lineText = line.text;
+                const lineLower = lineText.toLowerCase();
+                
+                // Check for exact code matches first
+                let hasICD10 = false;
+                let hasCPT = false;
+                let highlightedText = escapeHtml(lineText);
+                
+                // Check for exact code matches
+                exactCodes.forEach(code => {
+                    if (lineText.includes(code.toUpperCase()) || lineText.includes(code)) {
+                        const type = searchTerms.get(code);
+                        if (type === 'icd10') hasICD10 = true;
+                        if (type === 'cpt') hasCPT = true;
+                        
+                        // Highlight exact code
+                        const codeRegex = new RegExp(`\\b${code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+                        highlightedText = highlightedText.replace(codeRegex, (match) => {
+                            return `<span class="match-highlight" style="background: ${type === 'icd10' ? '#dbeafe' : '#dcfce7'}; padding: 2px 4px; border-radius: 2px; font-weight: 600;">${match}</span>`;
+                        });
+                    }
+                });
+                
+                // Check for key terms (only if code not found)
+                if (!hasICD10 && !hasCPT) {
+                    keyTerms.forEach(({ term, type }) => {
+                        // Only match if it's a whole word and meaningful
+                        const wordRegex = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+                        if (wordRegex.test(lineLower)) {
+                            if (type === 'icd10') hasICD10 = true;
+                            if (type === 'cpt') hasCPT = true;
+                            
+                            // Highlight key term
+                            highlightedText = highlightedText.replace(wordRegex, (match) => {
+                                return `<span class="match-highlight" style="background: ${type === 'icd10' ? '#dbeafe' : '#dcfce7'}; padding: 2px 4px; border-radius: 2px;">${match}</span>`;
+                            });
+                        }
+                    });
+                }
+
+                // Apply line-level highlighting
+                if (hasICD10 && hasCPT) {
+                    classes += ' highlight-both';
+                } else if (hasICD10) {
+                    classes += ' highlight-icd10';
+                } else if (hasCPT) {
+                    classes += ' highlight-cpt';
+                }
+
+                return `<div class="${classes}">${highlightedText}</div>`;
+            }).join('');
+        }
+
+        function displayCodes(coding, pricing) {
+            // Display coding band
+            const bandDiv = document.getElementById('codingBand');
+            const bandClass = `coding-band band-${coding.band.toLowerCase()}`;
+            bandDiv.innerHTML = `<span class="${bandClass}">${coding.band} Case</span>`;
+            bandDiv.style.display = 'block';
+
+            // Display ICD-10 codes
+            const icd10Div = document.getElementById('icd10Codes');
+            if (coding.icd10 && coding.icd10.length > 0) {
+                icd10Div.innerHTML = coding.icd10.map(icd => `
+                    <div class="code-item">
+                        <div class="code-header">
+                            <span class="code-value">${icd.code || icd}</span>
+                        </div>
+                        <div class="code-description">${icd.description || 'No description'}</div>
+                    </div>
+                `).join('');
+            } else {
+                icd10Div.innerHTML = '<div style="color: #94a3b8; font-size: 14px; text-align: center; padding: 20px;">No ICD-10 codes found</div>';
+            }
+
+            // Display CPT codes without pricing
+            const cptDiv = document.getElementById('cptCodes');
+            if (pricing.breakdown && pricing.breakdown.length > 0) {
+                cptDiv.innerHTML = pricing.breakdown.map(cpt => `
+                    <div class="code-item">
+                        <div class="code-header">
+                            <span class="code-value">${cpt.code}</span>
+                        </div>
+                        <div class="code-description">${cpt.description}</div>
+                    </div>
+                `).join('');
+            } else {
+                cptDiv.innerHTML = '<div style="color: #94a3b8; font-size: 14px; text-align: center; padding: 20px;">No CPT codes found</div>';
+            }
+        }
+
+        function showError(message) {
+            error.textContent = `Error: ${message}`;
+            error.style.display = 'block';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
+

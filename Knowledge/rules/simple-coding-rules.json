@@ -1,0 +1,41 @@
+[
+  {
+    "id": "psychotherapy_50",
+    "match": {
+      "appointment_type": "Outpatient psychotherapy",
+      "duration_minutes": 50,
+      "diagnosis_keywords": ["anxiety", "gad", "generalized anxiety"],
+      "procedure_keywords": ["psychotherapy", "cbt"]
+    },
+    "icd10": [{"code": "F41.1", "description": "Generalized anxiety disorder"}],
+    "cpt": [{"code": "90837", "description": "Psychotherapy, 60 minutes with patient and/or family member"}],
+    "rationale": "Standard 50-minute psychotherapy session for generalized anxiety disorder."
+  },
+  {
+    "id": "psychotherapy_30",
+    "match": {
+      "appointment_type": "Outpatient psychotherapy",
+      "duration_minutes": 30,
+      "diagnosis_keywords": ["depression", "depressive", "mdd", "major depressive"],
+      "procedure_keywords": ["psychotherapy", "cbt", "therapy"]
+    },
+    "icd10": [{"code": "F32.9", "description": "Major depressive disorder, single episode, unspecified"}],
+    "cpt": [{"code": "90834", "description": "Psychotherapy, 45 minutes with patient and/or family member"}],
+    "rationale": "Standard 30-45 minute psychotherapy session for depressive disorder."
+  },
+  {
+    "id": "medication_management",
+    "match": {
+      "appointment_type": "Psychiatric medication management",
+      "duration_minutes": 25,
+      "diagnosis_keywords": ["ptsd", "post-traumatic"],
+      "procedure_keywords": ["medication", "management", "evaluation"]
+    },
+    "icd10": [{"code": "F43.10", "description": "Post-traumatic stress disorder, unspecified"}],
+    "cpt": [
+      {"code": "99214", "description": "Office or outpatient visit, established patient, moderate complexity"},
+      {"code": "90833", "description": "Psychotherapy, 30 minutes with patient and/or family member when performed with an evaluation and management service"}
+    ],
+    "rationale": "Medication management visit with moderate complexity and brief psychotherapy add-on."
+  }
+]

@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Appointments - DocLittle Patient Portal</title>
+    <link rel="stylesheet" href="../assets/css/global.css">
+    <script src="../assets/js/config.js"></script>
+    <style>
+        :root {
+            --primary: #0891b2;
+            --primary-dark: #0e7490;
+        }
+
+        body {
+            background: var(--gray-50);
+            min-height: 100vh;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .header {
+            max-width: 900px;
+            margin: 0 auto 24px;
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            border: none;
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-200);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .appointments-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .appointment-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+            transition: all 0.2s;
+        }
+
+        .appointment-card:hover {
+            box-shadow: var(--shadow-lg);
+        }
+
+        .appointment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .appointment-info {
+            flex: 1;
+        }
+
+        .appointment-type {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .appointment-datetime {
+            font-size: 16px;
+            color: var(--gray-600);
+            margin-bottom: 4px;
+        }
+
+        .appointment-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-scheduled {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-confirmed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-completed {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .appointment-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .message-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .message-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 100%;
+            padding: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--gray-500);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid var(--gray-300);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1 class="header-title">My Appointments</h1>
+        </div>
+        <div class="header-actions">
+            <a href="profile.html" class="btn btn-secondary">Profile</a>
+            <button class="btn btn-secondary" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="messageContainer"></div>
+        <div id="appointmentsContainer" class="appointments-list">
+            <div class="empty-state">
+                <div class="empty-state-icon">⏳</div>
+                <p>Loading appointments...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reschedule Modal -->
+    <div class="modal-overlay" id="rescheduleModal" onclick="if(event.target===this) closeRescheduleModal()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Reschedule Appointment</h2>
+                <button class="modal-close" onclick="closeRescheduleModal()">×</button>
+            </div>
+            <form id="rescheduleForm" onsubmit="handleReschedule(event)">
+                <input type="hidden" id="rescheduleApptId">
+                <div class="form-group">
+                    <label class="form-label">New Date</label>
+                    <input type="date" id="rescheduleDate" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">New Time</label>
+                    <input type="time" id="rescheduleTime" class="form-input" required>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeRescheduleModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Reschedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cancel Modal -->
+    <div class="modal-overlay" id="cancelModal" onclick="if(event.target===this) closeCancelModal()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Cancel Appointment</h2>
+                <button class="modal-close" onclick="closeCancelModal()">×</button>
+            </div>
+            <form id="cancelForm" onsubmit="handleCancel(event)">
+                <input type="hidden" id="cancelApptId">
+                <div class="form-group">
+                    <label class="form-label">Reason (optional)</label>
+                    <input type="text" id="cancelReason" class="form-input" placeholder="E.g., Schedule conflict">
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeCancelModal()">Keep Appointment</button>
+                    <button type="submit" class="btn btn-primary" style="flex: 1; background: #dc3545;">Cancel Appointment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.API_BASE || 'http://localhost:4000';
+        let sessionId = localStorage.getItem('patient_session_id');
+
+        if (!sessionId) {
+            window.location.href = 'login.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAppointments();
+        });
+
+        async function loadAppointments() {
+            try {
+                const response = await fetch(`${API_BASE}/api/patient/appointments`, {
+                    headers: { 'x-session-id': sessionId }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayAppointments(data.appointments);
+                } else {
+                    if (data.error && data.error.includes('session')) {
+                        // Session expired
+                        localStorage.removeItem('patient_session_id');
+                        localStorage.removeItem('patient_phone');
+                        window.location.href = 'login.html';
+                    } else {
+                        showMessage('Failed to load appointments: ' + (data.error || 'Unknown error'), 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading appointments:', error);
+                showMessage('Network error. Please try again.', 'error');
+            }
+        }
+
+        function displayAppointments(appointments) {
+            const container = document.getElementById('appointmentsContainer');
+
+            if (appointments.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📅</div>
+                        <h3>No Appointments</h3>
+                        <p>You don't have any appointments yet.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = appointments.map(apt => {
+                const statusClass = `status-${apt.status}`;
+                return `
+                    <div class="appointment-card">
+                        <div class="appointment-header">
+                            <div class="appointment-info">
+                                <div class="appointment-type">${apt.appointment_type || 'Consultation'}</div>
+                                <div class="appointment-datetime">${apt.datetime_display || `${apt.date} at ${apt.time}`}</div>
+                                <span class="appointment-status ${statusClass}">${apt.status}</span>
+                            </div>
+                            <div class="appointment-actions">
+                                ${apt.can_reschedule ? `<button class="btn btn-secondary btn-sm" onclick="openRescheduleModal('${apt.id}', '${apt.date}', '${apt.time}')">Reschedule</button>` : ''}
+                                ${apt.can_cancel ? `<button class="btn btn-secondary btn-sm" onclick="openCancelModal('${apt.id}')">Cancel</button>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openRescheduleModal(apptId, currentDate, currentTime) {
+            document.getElementById('rescheduleApptId').value = apptId;
+            document.getElementById('rescheduleDate').value = currentDate;
+            document.getElementById('rescheduleTime').value = currentTime.split(':').slice(0, 2).join(':');
+            document.getElementById('rescheduleModal').classList.add('active');
+        }
+
+        function closeRescheduleModal() {
+            document.getElementById('rescheduleModal').classList.remove('active');
+        }
+
+        function openCancelModal(apptId) {
+            document.getElementById('cancelApptId').value = apptId;
+            document.getElementById('cancelModal').classList.add('active');
+        }
+
+        function closeCancelModal() {
+            document.getElementById('cancelModal').classList.remove('active');
+        }
+
+        async function handleReschedule(e) {
+            e.preventDefault();
+            const apptId = document.getElementById('rescheduleApptId').value;
+            const newDate = document.getElementById('rescheduleDate').value;
+            const newTime = document.getElementById('rescheduleTime').value + ':00';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/patient/appointments/${apptId}/reschedule`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-session-id': sessionId
+                    },
+                    body: JSON.stringify({
+                        new_date: newDate,
+                        new_time: newTime
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('Appointment rescheduled successfully!', 'success');
+                    closeRescheduleModal();
+                    loadAppointments();
+                } else {
+                    showMessage('Failed to reschedule: ' + (data.error || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                showMessage('Network error. Please try again.', 'error');
+            }
+        }
+
+        async function handleCancel(e) {
+            e.preventDefault();
+            const apptId = document.getElementById('cancelApptId').value;
+            const reason = document.getElementById('cancelReason').value;
+
+            if (!confirm('Are you sure you want to cancel this appointment?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/patient/appointments/${apptId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-session-id': sessionId
+                    },
+                    body: JSON.stringify({ reason })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('Appointment cancelled successfully.', 'success');
+                    closeCancelModal();
+                    loadAppointments();
+                } else {
+                    showMessage('Failed to cancel: ' + (data.error || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                showMessage('Network error. Please try again.', 'error');
+            }
+        }
+
+        function showMessage(message, type) {
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = `<div class="message message-${type}">${message}</div>`;
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        function logout() {
+            localStorage.removeItem('patient_session_id');
+            localStorage.removeItem('patient_phone');
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>
+

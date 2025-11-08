@@ -1,0 +1,12 @@
+[
+  {"code": "F32.9", "description": "Major depressive disorder, single episode, unspecified", "category": "Mental Health"},
+  {"code": "F41.1", "description": "Generalized anxiety disorder", "category": "Mental Health"},
+  {"code": "F43.10", "description": "Post-traumatic stress disorder, unspecified", "category": "Mental Health"},
+  {"code": "F34.1", "description": "Dysthymic disorder", "category": "Mental Health"},
+  {"code": "F90.0", "description": "Attention-deficit hyperactivity disorder, predominantly inattentive type", "category": "Mental Health"},
+  {"code": "F50.9", "description": "Eating disorder, unspecified", "category": "Mental Health"},
+  {"code": "F33.1", "description": "Major depressive disorder, recurrent, moderate", "category": "Mental Health"},
+  {"code": "F42.9", "description": "Obsessive-compulsive disorder, unspecified", "category": "Mental Health"},
+  {"code": "F51.01", "description": "Primary insomnia", "category": "Sleep Disorders"},
+  {"code": "F63.81", "description": "Intermittent explosive disorder", "category": "Behavioral"}
+]

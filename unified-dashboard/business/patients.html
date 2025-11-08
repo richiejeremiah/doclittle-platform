@@ -469,11 +469,7 @@
                     <span class="nav-icon">📅</span>
                     <span>Calendar</span>
                 </a>
-                <a href="records.html" class="nav-item">
-                    <span class="nav-icon">📁</span>
-                    <span>Records</span>
-                </a>
-                <a href="orders.html" class="nav-item">
+                <a href="billing.html" class="nav-item">
                     <span class="nav-icon">💳</span>
                     <span>Billing</span>
                 </a>
@@ -525,29 +521,29 @@
 
                 <div class="stat-card">
                     <div class="stat-header">
-                        <span class="stat-title">New Clients</span>
-                        <span class="stat-icon">🆕</span>
+                        <span class="stat-title">Eligible Clients</span>
+                        <span class="stat-icon">✅</span>
                     </div>
                     <div class="stat-value" id="newCustomers">0</div>
-                    <div class="stat-change">Last 7 days</div>
+                    <div class="stat-change">Eligible</div>
                 </div>
 
                 <div class="stat-card">
                     <div class="stat-header">
-                        <span class="stat-title">Repeat Clients</span>
-                        <span class="stat-icon">🔄</span>
+                        <span class="stat-title">With Coverage</span>
+                        <span class="stat-icon">🏥</span>
                     </div>
                     <div class="stat-value" id="repeatCustomers">0</div>
-                    <div class="stat-change">Multiple visits</div>
+                    <div class="stat-change">With Coverage</div>
                 </div>
 
                 <div class="stat-card">
                     <div class="stat-header">
-                        <span class="stat-title">Avg Order Value</span>
+                        <span class="stat-title">Total Copays</span>
                         <span class="stat-icon">💰</span>
                     </div>
                     <div class="stat-value" id="avgOrderValue">$0.00</div>
-                    <div class="stat-change">Per patient order</div>
+                    <div class="stat-change">Total Copays</div>
                 </div>
             </div>
 
@@ -570,6 +566,44 @@
                 <div class="empty-state">
                     <div class="empty-state-icon">👥</div>
                     <p>Loading client data...</p>
+                </div>
+            </div>
+
+            <!-- Optional: Insurance & Coverage panel (visible when ?patientId=FHIR_ID) -->
+            <div class="stat-card" id="insCoveragePanel" style="margin-top:24px; display:none;">
+                <div class="stat-header">
+                    <span class="stat-title">Insurance & Coverage</span>
+                    <span class="stat-icon">🩺</span>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+                    <div>
+                        <div style="font-size:12px;color:#64748b;">Provider</div>
+                        <div style="font-weight:700;" id="uiInsProvider">—</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:#64748b;">Member ID</div>
+                        <div style="font-weight:700;" id="uiInsMember">—</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:#64748b;">Eligibility</div>
+                        <div style="font-weight:700;" id="uiInsEligible">—</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:#64748b;">Copay (this visit)</div>
+                        <div style="font-weight:700;" id="uiInsCopay">—</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:#64748b;">Deductible</div>
+                        <div style="font-weight:700;" id="uiInsDeductible">—</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:#64748b;">Coinsurance</div>
+                        <div style="font-weight:700;" id="uiInsCoins">—</div>
+                    </div>
+                </div>
+                <div style="margin-top:12px;">
+                    <div style="font-size:12px;color:#64748b;">Plan Summary</div>
+                    <div id="uiInsPlanSummary" style="white-space:pre-wrap;">—</div>
                 </div>
             </div>
         </main>
@@ -624,22 +658,42 @@
                     };
                 });
 
-                // For each patient, fetch their appointments from the booking DB (by phone/email)
+                // For each patient, fetch their eligibility data (Stedi) and EHR data
                 const enriched = await Promise.all(patients.map(async p => {
                     try {
-                        const res = await fetch(`${API_BASE}/voice/appointments/search`, {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ args: { phone: p.customer_phone || undefined, email: p.customer_email || undefined } })
-                        });
-                        const data = await res.json();
-                        const appts = data.success ? (data.appointments || []) : [];
-                        // Compute simple stats
-                        const total = appts.length;
-                        const confirmed = appts.filter(a => a.status==='confirmed').length;
-                        const cancelled = appts.filter(a => a.status==='cancelled').length;
-                        const last = appts.sort((a,b)=> new Date(b.datetime_display)-new Date(a.datetime_display))[0];
-                        return { ...p, appointments: appts, appt_total: total, appt_confirmed: confirmed, appt_cancelled: cancelled, last_appointment: last ? last.datetime_display : null };
-                    } catch { return { ...p, appointments: [], appt_total: 0, appt_confirmed:0, appt_cancelled:0, last_appointment: null }; }
+                        // Fetch eligibility data (Stedi coverage/benefits)
+                        let eligibilityData = null;
+                        try {
+                            const eligRes = await fetch(`${API_BASE}/api/admin/patients/${encodeURIComponent(p.fhir_id)}/eligibility`);
+                            const eligResult = await eligRes.json();
+                            if (eligResult.success && eligResult.eligibility && eligResult.eligibility.length > 0) {
+                                // Get the most recent eligibility check
+                                eligibilityData = eligResult.eligibility[0];
+                            }
+                        } catch (eligError) {
+                            // Eligibility data not available - silently continue
+                            console.debug(`No eligibility data for patient ${p.fhir_id}`);
+                        }
+                        
+                        // Fetch EHR data from Epic
+                        let ehrData = null;
+                        try {
+                            const ehrRes = await fetch(`${API_BASE}/api/admin/patients/${encodeURIComponent(p.fhir_id)}/ehr-summary`);
+                            const ehrResult = await ehrRes.json();
+                            if (ehrResult.success && ehrResult.encounters && ehrResult.encounters.length > 0) {
+                                ehrData = ehrResult;
+                            }
+                        } catch (ehrError) {
+                            // EHR data not available - silently continue
+                            console.debug(`No EHR data for patient ${p.fhir_id}`);
+                        }
+                        
+                        return { 
+                            ...p, 
+                            eligibility: eligibilityData,
+                            ehr_data: ehrData
+                        };
+                    } catch { return { ...p, eligibility: null, ehr_data: null }; }
                 }));
 
                 allCustomers = enriched;
@@ -659,13 +713,12 @@
 
         function updateStatsFromPatients(patients) {
             const total = patients.length;
-            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-            const newPatients = patients.filter(p => (p.last_appointment && new Date(p.last_appointment) > sevenDaysAgo)).length;
-            const repeat = patients.filter(p => p.appt_total > 1).length;
+            const eligible = patients.filter(p => p.eligibility && p.eligibility.eligible).length;
+            const hasCoverage = patients.filter(p => p.eligibility).length;
             document.getElementById('totalCustomers').textContent = total;
-            document.getElementById('newCustomers').textContent = newPatients;
-            document.getElementById('repeatCustomers').textContent = repeat;
-            document.getElementById('avgOrderValue').textContent = `$0.00`;
+            document.getElementById('newCustomers').textContent = eligible;
+            document.getElementById('repeatCustomers').textContent = hasCoverage;
+            document.getElementById('avgOrderValue').textContent = `$${patients.filter(p => p.eligibility && p.eligibility.copay_amount).reduce((sum, p) => sum + (p.eligibility.copay_amount || 0), 0).toFixed(2)}`;
         }
 
         function displayCustomers(customers) {
@@ -686,19 +739,108 @@
 
         function createCustomerCard(patient) {
             const initials = (patient.customer_name || 'U').split(' ').map(n => n[0]).join('');
-            const lastAppt = patient.last_appointment ? new Date(patient.last_appointment).toLocaleString() : 'N/A';
-            const confirmed = patient.appt_confirmed || 0;
-            const cancelled = patient.appt_cancelled || 0;
             const phone = patient.customer_phone || 'No phone';
             const email = patient.customer_email || '';
+            const hasEhrData = patient.ehr_data && patient.ehr_data.encounters && patient.ehr_data.encounters.length > 0;
+            const eligibility = patient.eligibility || null;
 
-            // List up to 3 most recent appointments with status
-            const recentAppts = (patient.appointments || []).slice(0,3).map(a => `
-                <div class="purchase-item">
-                    <span>${a.appointment_type || 'Consultation'} — ${a.status}</span>
-                    <span>${a.datetime_display || ''}</span>
-                </div>
-            `).join('');
+            // Extract EHR data summary
+            let ehrSummary = '';
+            if (hasEhrData) {
+                const encounters = patient.ehr_data.encounters;
+                // Collect all unique conditions (ICD-10 codes)
+                const allConditions = [];
+                const allProcedures = [];
+                encounters.forEach(enc => {
+                    if (enc.conditions) {
+                        enc.conditions.forEach(c => {
+                            if (!allConditions.find(ex => ex.code === c.icd10_code)) {
+                                allConditions.push({ code: c.icd10_code, description: c.description, is_primary: c.is_primary });
+                            }
+                        });
+                    }
+                    if (enc.procedures) {
+                        enc.procedures.forEach(p => {
+                            if (!allProcedures.find(ex => ex.code === p.cpt_code)) {
+                                allProcedures.push({ code: p.cpt_code, description: p.description });
+                            }
+                        });
+                    }
+                });
+
+                // Count observations
+                const allObservations = [];
+                encounters.forEach(enc => {
+                    if (enc.observations) {
+                        enc.observations.forEach(o => {
+                            allObservations.push(o);
+                        });
+                    }
+                });
+
+                ehrSummary = `
+                    <div class="customer-ehr-section" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 12px; font-weight: 600; color: #64748b;">📊 Epic EHR Data</span>
+                                <span class="badge badge-success" style="font-size: 10px;">${encounters.length} Encounter(s)</span>
+                                ${allObservations.length > 0 ? `<span class="badge" style="background: #fef3c7; color: #92400e; font-size: 10px;">${allObservations.length} Observation(s)</span>` : ''}
+                            </div>
+                        </div>
+                        
+                        ${allConditions.length > 0 ? `
+                            <div style="margin-bottom: 8px;">
+                                <div style="font-size: 11px; color: #64748b; margin-bottom: 4px; font-weight: 500;">Diagnoses (ICD-10):</div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                                    ${allConditions.slice(0, 3).map(c => `
+                                        <span class="badge" style="background: #dbeafe; color: #1e40af; font-size: 10px; padding: 2px 6px; border-radius: 4px;">
+                                            ${c.code}${c.is_primary ? ' ⭐' : ''}
+                                        </span>
+                                    `).join('')}
+                                    ${allConditions.length > 3 ? `<span style="font-size: 10px; color: #64748b;">+${allConditions.length - 3} more</span>` : ''}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        ${allProcedures.length > 0 ? `
+                            <div style="margin-bottom: 8px;">
+                                <div style="font-size: 11px; color: #64748b; margin-bottom: 4px; font-weight: 500;">Procedures (CPT):</div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                                    ${allProcedures.slice(0, 3).map(p => `
+                                        <span class="badge" style="background: #dcfce7; color: #166534; font-size: 10px; padding: 2px 6px; border-radius: 4px;">
+                                            ${p.code}
+                                        </span>
+                                    `).join('')}
+                                    ${allProcedures.length > 3 ? `<span style="font-size: 10px; color: #64748b;">+${allProcedures.length - 3} more</span>` : ''}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        ${allObservations.length > 0 ? `
+                            <div style="margin-bottom: 8px;">
+                                <div style="font-size: 11px; color: #64748b; margin-bottom: 4px; font-weight: 500;">Observations (Vitals/Notes):</div>
+                                <div style="font-size: 10px; color: #64748b;">
+                                    ${allObservations.slice(0, 3).map(o => `${o.type || 'Unknown'}: ${o.value || 'N/A'}${o.unit ? ' ' + o.unit : ''}`).join(' · ')}
+                                    ${allObservations.length > 3 ? ` · +${allObservations.length - 3} more` : ''}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        ${!allConditions.length && !allProcedures.length && !allObservations.length ? `
+                            <div style="font-size: 11px; color: #94a3b8; font-style: italic;">
+                                No diagnosis, procedure codes, or observations found in Epic
+                            </div>
+                        ` : ''}
+                        
+                        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #f1f5f9;">
+                            <button class="btn btn-secondary btn-sm" onclick="viewPatientEhrDetails('${patient.fhir_id}')" style="width: 100%; font-size: 10px; padding: 4px 8px;">
+                                📋 View Full EHR Details
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
 
             return `
                 <div class="customer-card">
@@ -708,37 +850,47 @@
                             <div class="customer-name">${patient.customer_name}</div>
                             <div class="customer-contact">${phone}${email ? ' · ' + email : ''}</div>
                         </div>
-                        <span class="badge badge-info">FHIR</span>
+                        <div style="display: flex; gap: 4px; align-items: center;">
+                            ${hasEhrData ? '<span class="badge badge-success" style="font-size: 10px;">EPIC</span>' : ''}
+                            <span class="badge badge-info">FHIR</span>
+                        </div>
                     </div>
 
                     <div class="customer-stats">
                         <div class="stat-item">
-                            <div class="stat-value">${patient.appt_total}</div>
-                            <div class="stat-label">Appointments</div>
+                            <div class="stat-value">${eligibility ? (eligibility.eligible ? '✅ Yes' : '❌ No') : '—'}</div>
+                            <div class="stat-label">Coverage</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-value">${confirmed}</div>
-                            <div class="stat-label">Confirmed</div>
+                            <div class="stat-value">${eligibility && eligibility.copay_amount ? '$' + eligibility.copay_amount.toFixed(2) : '—'}</div>
+                            <div class="stat-label">Copay</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-value">${cancelled}</div>
-                            <div class="stat-label">Cancelled</div>
+                            <div class="stat-value">${eligibility && eligibility.deductible_remaining !== null ? '$' + eligibility.deductible_remaining.toFixed(0) : '—'}</div>
+                            <div class="stat-label">Deductible</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-value">${lastAppt}</div>
-                            <div class="stat-label">Last Appt</div>
+                            <div class="stat-value">${eligibility && eligibility.coinsurance_percent !== null ? eligibility.coinsurance_percent + '%' : '—'}</div>
+                            <div class="stat-label">Coinsurance</div>
                         </div>
                     </div>
-
-                    ${recentAppts ? `
-                        <div class="customer-purchases">
-                            <h4>Recent Appointments</h4>
-                            ${recentAppts}
+                    
+                    ${eligibility && eligibility.plan_summary ? `
+                        <div style="margin-top: 12px; padding: 8px; background: #f8fafc; border-radius: 6px; border-left: 3px solid #3b82f6;">
+                            <div style="font-size: 11px; color: #64748b; margin-bottom: 4px; font-weight: 500;">Plan Summary</div>
+                            <div style="font-size: 12px; color: #1e293b;">${eligibility.plan_summary}</div>
+                            ${eligibility.payer_id ? `<div style="font-size: 10px; color: #64748b; margin-top: 4px;">Payer: ${eligibility.payer_id} · Member: ${eligibility.member_id || 'N/A'}</div>` : ''}
                         </div>
-                    ` : ''}
+                    ` : `
+                        <div style="margin-top: 12px; padding: 8px; background: #fef2f2; border-radius: 6px; border-left: 3px solid #ef4444;">
+                            <div style="font-size: 11px; color: #991b1b;">No insurance coverage data available</div>
+                        </div>
+                    `}
+
+                    ${ehrSummary}
 
                     <div class="customer-actions">
-                        <button class="btn btn-secondary btn-sm" onclick="viewPatientDetails('${patient.fhir_id}')">👁️ View Details</button>
+                        <button class="btn btn-secondary btn-sm" onclick="viewPatientBilling('${patient.fhir_id}')">💰 View Bill</button>
                         ${patient.customer_phone ? `<button class=\"btn btn-primary btn-sm\" onclick=\"contactCustomer('${patient.customer_phone}')\">📞 Contact</button>` : ''}
                     </div>
                 </div>
@@ -762,8 +914,104 @@
             displayCustomers(filtered);
         }
 
+        function viewPatientBilling(fhirId) {
+            // Navigate to billing page for this patient
+            window.location.href = `billing.html?patient=${encodeURIComponent(fhirId)}`;
+        }
+        
         function viewPatientDetails(fhirId) {
+            // Navigate to records, but also support inline insurance view via param
             window.location.href = `records.html?id=${encodeURIComponent(fhirId)}`;
+        }
+
+        function viewPatientEhrDetails(fhirId) {
+            // Show detailed EHR data in a modal
+            const patient = allCustomers.find(p => p.fhir_id === fhirId);
+            if (!patient || !patient.ehr_data) {
+                alert('No EHR data available for this patient');
+                return;
+            }
+
+            const encounters = patient.ehr_data.encounters;
+            let ehrDetailsHtml = `
+                <div style="max-width: 800px; max-height: 80vh; overflow-y: auto;">
+                    <h2 style="margin: 0 0 16px 0; font-size: 20px;">📊 Epic EHR Data for ${patient.customer_name}</h2>
+                    <div style="margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 8px;">
+                        <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">Summary</div>
+                        <div style="font-size: 12px; color: #64748b;">
+                            <div>Total Encounters: <strong>${encounters.length}</strong></div>
+                            <div>FHIR Patient ID: <strong>${fhirId}</strong></div>
+                        </div>
+                    </div>
+            `;
+
+            encounters.forEach((enc, idx) => {
+                const encounterDate = enc.encounter.start_time ? new Date(enc.encounter.start_time).toLocaleString() : 'N/A';
+                ehrDetailsHtml += `
+                    <div style="margin-bottom: 16px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">
+                            Encounter #${idx + 1} - ${encounterDate}
+                        </div>
+                        
+                        ${enc.conditions && enc.conditions.length > 0 ? `
+                            <div style="margin-bottom: 12px;">
+                                <div style="font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 6px;">Diagnoses (ICD-10):</div>
+                                ${enc.conditions.map(c => `
+                                    <div style="padding: 6px 10px; margin-bottom: 4px; background: #dbeafe; border-radius: 4px; font-size: 12px;">
+                                        <strong>${c.icd10_code}</strong> ${c.is_primary ? '<span style="color: #dc2626;">⭐ Primary</span>' : ''}
+                                        <div style="color: #64748b; font-size: 11px; margin-top: 2px;">${c.description || 'No description'}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        ${enc.procedures && enc.procedures.length > 0 ? `
+                            <div style="margin-bottom: 12px;">
+                                <div style="font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 6px;">Procedures (CPT):</div>
+                                ${enc.procedures.map(p => `
+                                    <div style="padding: 6px 10px; margin-bottom: 4px; background: #dcfce7; border-radius: 4px; font-size: 12px;">
+                                        <strong>${p.cpt_code}</strong>${p.modifier ? ` (${p.modifier})` : ''}
+                                        <div style="color: #64748b; font-size: 11px; margin-top: 2px;">${p.description || 'No description'}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        ${enc.observations && enc.observations.length > 0 ? `
+                            <div style="margin-bottom: 12px;">
+                                <div style="font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 6px;">Observations:</div>
+                                ${enc.observations.map(o => `
+                                    <div style="padding: 6px 10px; margin-bottom: 4px; background: #fef3c7; border-radius: 4px; font-size: 12px;">
+                                        <strong>${o.type || 'Unknown'}</strong>: ${o.value || 'N/A'}${o.unit ? ' ' + o.unit : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        ${!enc.conditions?.length && !enc.procedures?.length && !enc.observations?.length ? `
+                            <div style="padding: 8px; background: #f8fafc; border-radius: 4px; font-size: 11px; color: #94a3b8; font-style: italic;">
+                                No clinical data available for this encounter
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            ehrDetailsHtml += '</div>';
+
+            // Create and show modal
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px;';
+            modal.innerHTML = `
+                <div style="background: white; border-radius: 12px; padding: 24px; max-width: 90%; max-height: 90%; overflow-y: auto; position: relative;">
+                    <button onclick="this.closest('div[style*=\"position: fixed\"]').remove()" style="position: absolute; top: 16px; right: 16px; background: #f1f5f9; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 18px;">×</button>
+                    ${ehrDetailsHtml}
+                    <div style="margin-top: 16px; text-align: right;">
+                        <button onclick="this.closest('div[style*=\"position: fixed\"]').remove()" class="btn btn-primary btn-sm">Close</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
         }
 
         function contactCustomer(phone) {
@@ -777,7 +1025,38 @@
             sessionStorage.clear();
             window.location.href = '../index.html';
         }
+
+        // Inline insurance loader (if ?patientId= present on this page)
+        (function loadInlineInsurance(){
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const pid = params.get('patientId');
+                if (!pid) return;
+                document.getElementById('insCoveragePanel').style.display = 'block';
+                Promise.all([
+                    fetch(`${API_BASE}/api/admin/patients/${encodeURIComponent(pid)}/insurance`).then(r=>r.json()),
+                    fetch(`${API_BASE}/api/admin/patients/${encodeURIComponent(pid)}/eligibility`).then(r=>r.json())
+                ]).then(([ins, elig]) => {
+                    if (ins.success && Array.isArray(ins.insurance) && ins.insurance.length) {
+                        const primary = ins.insurance.find(i=>i.is_primary) || ins.insurance[0];
+                        document.getElementById('uiInsProvider').textContent = primary.payer_name || primary.payer_id || '—';
+                        document.getElementById('uiInsMember').textContent = primary.member_id || '—';
+                    }
+                    if (elig.success && Array.isArray(elig.eligibility) && elig.eligibility.length) {
+                        const latest = elig.eligibility[0];
+                        document.getElementById('uiInsEligible').textContent = latest.eligible ? 'Active' : 'Inactive';
+                        document.getElementById('uiInsCopay').textContent = (latest.copay_amount != null) ? `$${latest.copay_amount}` : '—';
+                        const dTot = (latest.deductible_total != null) ? `$${latest.deductible_total}` : '—';
+                        const dRem = (latest.deductible_remaining != null) ? `$${latest.deductible_remaining}` : '—';
+                        document.getElementById('uiInsDeductible').textContent = `${dTot} / ${dRem}`;
+                        document.getElementById('uiInsCoins').textContent = (latest.coinsurance_percent != null) ? `${latest.coinsurance_percent}%` : '—';
+                        document.getElementById('uiInsPlanSummary').textContent = latest.plan_summary || '—';
+                    }
+                }).catch(()=>{});
+            } catch (_) {}
+        })();
     </script>
 </body>
 
 </html>
+

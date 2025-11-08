@@ -1,6 +1,9 @@
 const Database = require('better-sqlite3');
 const db = new Database('middleware.db');
 
+// Disable foreign key constraints during migrations (they can cause issues with ALTER TABLE)
+db.pragma('foreign_keys = OFF');
+
 // Initialize tables
 db.exec(`
   CREATE TABLE IF NOT EXISTS merchants (
@@ -283,6 +286,187 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_fhir_audit_timestamp ON fhir_audit_log(timestamp);
 
   -- ============================================
+  -- EHR INTEGRATION TABLES
+  -- ============================================
+
+  CREATE TABLE IF NOT EXISTS ehr_connections (
+    id TEXT PRIMARY KEY,
+    provider_id TEXT,
+    ehr_name TEXT NOT NULL,
+    client_id TEXT,
+    client_secret TEXT,
+    auth_url TEXT,
+    access_token TEXT,
+    refresh_token TEXT,
+    expires_at DATETIME,
+    state_token TEXT,
+    patient_id TEXT,
+    connected_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS ehr_encounters (
+    id TEXT PRIMARY KEY,
+    fhir_encounter_id TEXT UNIQUE NOT NULL,
+    patient_id TEXT NOT NULL,
+    appointment_id TEXT,
+    provider_id TEXT,
+    start_time DATETIME,
+    end_time DATETIME,
+    status TEXT,
+    raw_json TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES fhir_patients(resource_id),
+    FOREIGN KEY (appointment_id) REFERENCES appointments(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS ehr_conditions (
+    id TEXT PRIMARY KEY,
+    ehr_encounter_id TEXT NOT NULL,
+    icd10_code TEXT NOT NULL,
+    description TEXT,
+    is_primary BOOLEAN DEFAULT 0,
+    raw_json TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ehr_encounter_id) REFERENCES ehr_encounters(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS ehr_procedures (
+    id TEXT PRIMARY KEY,
+    ehr_encounter_id TEXT NOT NULL,
+    cpt_code TEXT NOT NULL,
+    modifier TEXT,
+    description TEXT,
+    raw_json TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ehr_encounter_id) REFERENCES ehr_encounters(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS ehr_observations (
+    id TEXT PRIMARY KEY,
+    ehr_encounter_id TEXT NOT NULL,
+    type TEXT,
+    value TEXT,
+    unit TEXT,
+    raw_json TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ehr_encounter_id) REFERENCES ehr_encounters(id)
+  );
+
+  -- EHR Indexes
+  CREATE INDEX IF NOT EXISTS idx_ehr_connections_provider_id ON ehr_connections(provider_id);
+  CREATE INDEX IF NOT EXISTS idx_ehr_connections_ehr_name ON ehr_connections(ehr_name);
+  CREATE INDEX IF NOT EXISTS idx_ehr_encounters_patient_id ON ehr_encounters(patient_id);
+  CREATE INDEX IF NOT EXISTS idx_ehr_encounters_appointment_id ON ehr_encounters(appointment_id);
+  CREATE INDEX IF NOT EXISTS idx_ehr_encounters_start_time ON ehr_encounters(start_time);
+  CREATE INDEX IF NOT EXISTS idx_ehr_conditions_encounter_id ON ehr_conditions(ehr_encounter_id);
+  CREATE INDEX IF NOT EXISTS idx_ehr_conditions_icd10_code ON ehr_conditions(icd10_code);
+  CREATE INDEX IF NOT EXISTS idx_ehr_procedures_encounter_id ON ehr_procedures(ehr_encounter_id);
+  CREATE INDEX IF NOT EXISTS idx_ehr_procedures_cpt_code ON ehr_procedures(cpt_code);
+  CREATE INDEX IF NOT EXISTS idx_ehr_observations_encounter_id ON ehr_observations(ehr_encounter_id);
+`);
+
+// Run migrations AFTER tables are created
+// Migration: Add appointment_id column if it doesn't exist (for existing databases)
+try {
+  // Check if voice_checkouts table exists
+  const tableExists = db.prepare(`
+    SELECT name FROM sqlite_master WHERE type='table' AND name='voice_checkouts'
+  `).get();
+
+  if (tableExists) {
+    const tableInfo = db.prepare(`PRAGMA table_info(voice_checkouts)`).all();
+    const hasAppointmentId = tableInfo.some(col => col.name === 'appointment_id');
+    if (!hasAppointmentId) {
+      console.log('📦 Adding appointment_id column to voice_checkouts table...');
+      db.exec(`ALTER TABLE voice_checkouts ADD COLUMN appointment_id TEXT;`);
+      console.log('✅ Migration complete: appointment_id column added');
+    }
+    // Create index after column is added (or if it already exists)
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_voice_checkouts_appointment_id ON voice_checkouts(appointment_id);`);
+  }
+} catch (migrationError) {
+  console.warn('⚠️  Migration check failed:', migrationError.message);
+}
+
+// Migration: Add verification_code columns to payment_tokens if they don't exist
+try {
+  // Check if payment_tokens table exists
+  const tableExists = db.prepare(`
+    SELECT name FROM sqlite_master WHERE type='table' AND name='payment_tokens'
+  `).get();
+
+  if (tableExists) {
+    const paymentTokensInfo = db.prepare(`PRAGMA table_info(payment_tokens)`).all();
+    const hasVerificationCode = paymentTokensInfo.some(col => col.name === 'verification_code');
+    const hasVerificationCodeExpires = paymentTokensInfo.some(col => col.name === 'verification_code_expires');
+
+    if (!hasVerificationCode) {
+      console.log('📦 Adding verification_code column to payment_tokens table...');
+      db.exec(`ALTER TABLE payment_tokens ADD COLUMN verification_code TEXT;`);
+      console.log('✅ Migration complete: verification_code column added');
+    }
+
+    if (!hasVerificationCodeExpires) {
+      console.log('📦 Adding verification_code_expires column to payment_tokens table...');
+      db.exec(`ALTER TABLE payment_tokens ADD COLUMN verification_code_expires DATETIME;`);
+      console.log('✅ Migration complete: verification_code_expires column added');
+    }
+  }
+} catch (migrationError) {
+  console.warn('⚠️  Payment tokens migration check failed:', migrationError.message);
+}
+
+// Migration: Add eligibility detail columns if they don't exist
+try {
+  const eligExists = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='eligibility_checks'`).get();
+  if (eligExists) {
+    const info = db.prepare(`PRAGMA table_info(eligibility_checks)`).all();
+    const needDeductTotal = !info.some(c => c.name === 'deductible_total');
+    const needDeductRemain = !info.some(c => c.name === 'deductible_remaining');
+    const needCoins = !info.some(c => c.name === 'coinsurance_percent');
+    const needPlan = !info.some(c => c.name === 'plan_summary');
+    if (needDeductTotal) db.exec(`ALTER TABLE eligibility_checks ADD COLUMN deductible_total REAL;`);
+    if (needDeductRemain) db.exec(`ALTER TABLE eligibility_checks ADD COLUMN deductible_remaining REAL;`);
+    if (needCoins) db.exec(`ALTER TABLE eligibility_checks ADD COLUMN coinsurance_percent REAL;`);
+    if (needPlan) db.exec(`ALTER TABLE eligibility_checks ADD COLUMN plan_summary TEXT;`);
+  }
+} catch (migrationError) {
+  console.warn('⚠️  Eligibility checks migration failed:', migrationError.message);
+}
+
+// Migration: Add EHR sync columns to appointments table
+try {
+  const apptExists = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='appointments'`).get();
+  if (apptExists) {
+    const info = db.prepare(`PRAGMA table_info(appointments)`).all();
+    const needEhrSynced = !info.some(c => c.name === 'ehr_synced');
+    const needPrimaryIcd10 = !info.some(c => c.name === 'primary_icd10');
+    const needPrimaryCpt = !info.some(c => c.name === 'primary_cpt');
+    if (needEhrSynced) {
+      console.log('📦 Adding ehr_synced column to appointments table...');
+      db.exec(`ALTER TABLE appointments ADD COLUMN ehr_synced BOOLEAN DEFAULT 0;`);
+    }
+    if (needPrimaryIcd10) {
+      console.log('📦 Adding primary_icd10 column to appointments table...');
+      db.exec(`ALTER TABLE appointments ADD COLUMN primary_icd10 TEXT;`);
+    }
+    if (needPrimaryCpt) {
+      console.log('📦 Adding primary_cpt column to appointments table...');
+      db.exec(`ALTER TABLE appointments ADD COLUMN primary_cpt TEXT;`);
+    }
+    if (needEhrSynced || needPrimaryIcd10 || needPrimaryCpt) {
+      console.log('✅ Migration complete: EHR columns added to appointments');
+    }
+  }
+} catch (migrationError) {
+  console.warn('⚠️  Appointments EHR migration failed:', migrationError.message);
+}
+
+// Continue with remaining table creation
+db.exec(`
+  -- ============================================
   -- USERS TABLE
   -- ============================================
   CREATE TABLE IF NOT EXISTS users (
@@ -332,7 +516,209 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_appointments_phone ON appointments(patient_phone);
   CREATE INDEX IF NOT EXISTS idx_appointments_email ON appointments(patient_email);
   CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status);
+
+  -- ============================================
+  -- INSURANCE & BILLING TABLES
+  -- ============================================
+
+  CREATE TABLE IF NOT EXISTS eligibility_checks (
+    id TEXT PRIMARY KEY,
+    patient_id TEXT,
+    member_id TEXT NOT NULL,
+    payer_id TEXT NOT NULL,
+    service_code TEXT,
+    date_of_service TEXT,
+    eligible BOOLEAN DEFAULT 0,
+    copay_amount REAL DEFAULT 0,
+    allowed_amount REAL DEFAULT 0,
+    insurance_pays REAL DEFAULT 0,
+    deductible_total REAL,
+    deductible_remaining REAL,
+    coinsurance_percent REAL,
+    plan_summary TEXT,
+    response_data TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES fhir_patients(resource_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS insurance_claims (
+    id TEXT PRIMARY KEY,
+    appointment_id TEXT,
+    patient_id TEXT,
+    member_id TEXT NOT NULL,
+    payer_id TEXT NOT NULL,
+    service_code TEXT,
+    diagnosis_code TEXT,
+    total_amount REAL NOT NULL,
+    copay_amount REAL DEFAULT 0,
+    insurance_amount REAL DEFAULT 0,
+    status TEXT DEFAULT 'submitted',
+    x12_claim_id TEXT,
+    idempotency_key TEXT,
+    blockchain_proof TEXT,
+    submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status_checked_at DATETIME,
+    approved_at DATETIME,
+    paid_at DATETIME,
+    response_data TEXT,
+    circle_transfer_id TEXT,
+    payment_status TEXT DEFAULT 'pending',
+    payment_amount REAL,
+    FOREIGN KEY (appointment_id) REFERENCES appointments(id),
+    FOREIGN KEY (patient_id) REFERENCES fhir_patients(resource_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS insurance_payers (
+    id TEXT PRIMARY KEY,
+    payer_id TEXT UNIQUE NOT NULL,
+    payer_name TEXT NOT NULL,
+    aliases TEXT,
+    supported_transactions TEXT,
+    is_active BOOLEAN DEFAULT 1,
+    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS patient_insurance (
+    id TEXT PRIMARY KEY,
+    patient_id TEXT NOT NULL,
+    payer_id TEXT NOT NULL,
+    payer_name TEXT,
+    member_id TEXT NOT NULL,
+    group_number TEXT,
+    plan_name TEXT,
+    relationship_code TEXT DEFAULT 'self',
+    is_primary BOOLEAN DEFAULT 1,
+    is_verified BOOLEAN DEFAULT 0,
+    verified_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES fhir_patients(resource_id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_eligibility_checks_patient_id ON eligibility_checks(patient_id);
+  CREATE INDEX IF NOT EXISTS idx_eligibility_checks_member_id ON eligibility_checks(member_id);
+  CREATE INDEX IF NOT EXISTS idx_insurance_claims_appointment_id ON insurance_claims(appointment_id);
+  CREATE INDEX IF NOT EXISTS idx_insurance_claims_patient_id ON insurance_claims(patient_id);
+  CREATE INDEX IF NOT EXISTS idx_insurance_claims_status ON insurance_claims(status);
+  CREATE INDEX IF NOT EXISTS idx_insurance_claims_idem ON insurance_claims(idempotency_key);
+  CREATE INDEX IF NOT EXISTS idx_insurance_payers_payer_id ON insurance_payers(payer_id);
+  CREATE INDEX IF NOT EXISTS idx_insurance_payers_name ON insurance_payers(payer_name);
+  CREATE INDEX IF NOT EXISTS idx_patient_insurance_patient_id ON patient_insurance(patient_id);
+  CREATE INDEX IF NOT EXISTS idx_patient_insurance_payer_id ON patient_insurance(payer_id);
+  CREATE INDEX IF NOT EXISTS idx_patient_insurance_member_id ON patient_insurance(member_id);
+
+  -- ============================================
+  -- CIRCLE PAYMENT INTEGRATION TABLES
+  -- ============================================
+
+  CREATE TABLE IF NOT EXISTS circle_accounts (
+    id TEXT PRIMARY KEY,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    circle_wallet_id TEXT UNIQUE,
+    circle_account_id TEXT,
+    currency TEXT DEFAULT 'USDC',
+    status TEXT DEFAULT 'active',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS circle_transfers (
+    id TEXT PRIMARY KEY,
+    claim_id TEXT,
+    from_wallet_id TEXT NOT NULL,
+    to_wallet_id TEXT NOT NULL,
+    amount REAL NOT NULL,
+    currency TEXT DEFAULT 'USDC',
+    circle_transfer_id TEXT UNIQUE,
+    status TEXT DEFAULT 'pending',
+    error_message TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    completed_at DATETIME,
+    FOREIGN KEY (claim_id) REFERENCES insurance_claims(id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_circle_accounts_entity_type ON circle_accounts(entity_type);
+  CREATE INDEX IF NOT EXISTS idx_circle_accounts_entity_id ON circle_accounts(entity_id);
+  CREATE INDEX IF NOT EXISTS idx_circle_transfers_claim_id ON circle_transfers(claim_id);
+  CREATE INDEX IF NOT EXISTS idx_circle_transfers_status ON circle_transfers(status);
+  CREATE INDEX IF NOT EXISTS idx_circle_transfers_circle_transfer_id ON circle_transfers(circle_transfer_id);
+
+  CREATE TABLE IF NOT EXISTS patient_portal_sessions (
+    id TEXT PRIMARY KEY,
+    patient_id TEXT,
+    phone TEXT NOT NULL,
+    verification_code TEXT,
+    verified BOOLEAN DEFAULT 0,
+    verified_at DATETIME,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES fhir_patients(resource_id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_portal_sessions_phone ON patient_portal_sessions(phone);
+  CREATE INDEX IF NOT EXISTS idx_portal_sessions_verified ON patient_portal_sessions(verified);
+
+  CREATE TABLE IF NOT EXISTS cpt_codes (
+    code TEXT PRIMARY KEY,
+    description TEXT NOT NULL,
+    category TEXT,
+    subcategory TEXT,
+    is_new BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_cpt_codes_description ON cpt_codes(description);
 `);
+
+// Re-enable foreign keys after table creation
+db.pragma('foreign_keys = ON');
+
+/**
+ * Migration: Add missing columns to insurance_claims table
+ * This handles the case where the table was created before circle_transfer_id, payment_status, and payment_amount were added
+ */
+function migrateInsuranceClaimsTable() {
+  try {
+    // Temporarily disable foreign keys for migration
+    db.pragma('foreign_keys = OFF');
+    
+    // Get table info to check existing columns
+    const tableInfo = db.prepare("PRAGMA table_info(insurance_claims)").all();
+    const columnNames = tableInfo.map(col => col.name);
+
+    // Check and add circle_transfer_id if missing
+    if (!columnNames.includes('circle_transfer_id')) {
+      console.log('🔄 Migrating: Adding circle_transfer_id column to insurance_claims table');
+      db.prepare("ALTER TABLE insurance_claims ADD COLUMN circle_transfer_id TEXT").run();
+    }
+
+    // Check and add payment_status if missing
+    if (!columnNames.includes('payment_status')) {
+      console.log('🔄 Migrating: Adding payment_status column to insurance_claims table');
+      db.prepare("ALTER TABLE insurance_claims ADD COLUMN payment_status TEXT DEFAULT 'pending'").run();
+    }
+
+    // Check and add payment_amount if missing
+    if (!columnNames.includes('payment_amount')) {
+      console.log('🔄 Migrating: Adding payment_amount column to insurance_claims table');
+      db.prepare("ALTER TABLE insurance_claims ADD COLUMN payment_amount REAL").run();
+    }
+    
+    // Re-enable foreign keys after migration
+    db.pragma('foreign_keys = ON');
+  } catch (error) {
+    console.error('❌ Error during insurance_claims table migration:', error);
+    // Re-enable foreign keys even if migration fails
+    db.pragma('foreign_keys = ON');
+    // Don't throw - allow the app to continue even if migration fails
+  }
+}
+
+// Run migration on startup
+migrateInsuranceClaimsTable();
 
 /**
  * Helper to safely stringify data
@@ -342,6 +728,7 @@ function safeStringify(data) {
   if (typeof data === 'string') return data;
   return JSON.stringify(data);
 }
+
 
 module.exports = {
   // ============================================
@@ -601,12 +988,12 @@ module.exports = {
   createVoiceCheckout: (checkout) => {
     // Ensure customer_phone is never null (required field)
     const customerPhone = checkout.customer_phone || '0000000000';
-    
+
     return db.prepare(`
       INSERT INTO voice_checkouts 
       (id, merchant_id, product_id, product_name, quantity, amount, 
-       customer_phone, customer_name, customer_email, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       customer_phone, customer_name, customer_email, appointment_id, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       checkout.id,
       checkout.merchant_id,
@@ -617,6 +1004,7 @@ module.exports = {
       customerPhone,
       checkout.customer_name || null,
       checkout.customer_email || null,
+      checkout.appointment_id || null,
       checkout.status || 'pending'
     );
   },
@@ -652,6 +1040,10 @@ module.exports = {
     if (updates.fhir_encounter_id) {
       fields.push('fhir_encounter_id = ?');
       values.push(updates.fhir_encounter_id);
+    }
+    if (updates.appointment_id !== undefined) {
+      fields.push('appointment_id = ?');
+      values.push(updates.appointment_id);
     }
     if (updates.status === 'completed') {
       fields.push('completed_at = CURRENT_TIMESTAMP');
@@ -1319,7 +1711,6 @@ module.exports = {
     if (fields.length === 0) return;
 
     fields.push('updated_at = CURRENT_TIMESTAMP');
-    values.push(id);
 
     const query = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
     return db.prepare(query).run(...values);
@@ -1477,10 +1868,7 @@ module.exports = {
       fields.push('end_time = ?');
       values.push(updates.end_time);
     }
-    if (updates.timezone !== undefined) {
-      fields.push('timezone = ?');
-      values.push(updates.timezone);
-    }
+    // Note: appointments table has no timezone column; store timezone in notes JSON if needed
     if (updates.notes !== undefined) {
       fields.push('notes = ?');
       values.push(updates.notes);
@@ -1499,14 +1887,13 @@ module.exports = {
     }
 
     fields.push('updated_at = CURRENT_TIMESTAMP');
-    values.push(id);
 
     const query = `
       UPDATE appointments
       SET ${fields.join(', ')}
       WHERE id = ? OR id LIKE ?
     `;
-    
+
     const stmt = db.prepare(query);
     return stmt.run(...values, id, `%${id}%`);
   },
@@ -1540,6 +1927,664 @@ module.exports = {
     return stmt.all(today, limit);
   },
 
+  // ============================================
+  // INSURANCE & BILLING
+  // ============================================
+
+  // Create eligibility check record
+  createEligibilityCheck(eligibility) {
+    const stmt = db.prepare(`
+      INSERT INTO eligibility_checks (
+        id, patient_id, member_id, payer_id, service_code,
+        date_of_service, eligible, copay_amount, allowed_amount,
+        insurance_pays, deductible_total, deductible_remaining,
+        coinsurance_percent, plan_summary, response_data, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    return stmt.run(
+      eligibility.id,
+      eligibility.patient_id || null,
+      eligibility.member_id,
+      eligibility.payer_id,
+      eligibility.service_code || null,
+      eligibility.date_of_service || null,
+      eligibility.eligible ? 1 : 0,
+      eligibility.copay_amount || 0,
+      eligibility.allowed_amount || 0,
+      eligibility.insurance_pays || 0,
+      eligibility.deductible_total !== undefined ? eligibility.deductible_total : null,
+      eligibility.deductible_remaining !== undefined ? eligibility.deductible_remaining : null,
+      eligibility.coinsurance_percent !== undefined ? eligibility.coinsurance_percent : null,
+      eligibility.plan_summary || null,
+      eligibility.response_data || null,
+      eligibility.created_at || new Date().toISOString()
+    );
+  },
+
+  // Get eligibility check by ID
+  getEligibilityCheck(id) {
+    const stmt = db.prepare('SELECT * FROM eligibility_checks WHERE id = ?');
+    return stmt.get(id);
+  },
+
+  // Get eligibility checks for a patient
+  getEligibilityChecksByPatient(patientId) {
+    const stmt = db.prepare(`
+      SELECT * FROM eligibility_checks
+      WHERE patient_id = ?
+      ORDER BY created_at DESC
+    `);
+    return stmt.all(patientId);
+  },
+
+  // Create insurance claim
+  createInsuranceClaim(claim) {
+    const stmt = db.prepare(`
+      INSERT INTO insurance_claims (
+        id, appointment_id, patient_id, member_id, payer_id,
+        service_code, diagnosis_code, total_amount, copay_amount,
+        insurance_amount, status, x12_claim_id, blockchain_proof,
+        submitted_at, response_data, circle_transfer_id, payment_status, payment_amount
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    return stmt.run(
+      claim.id,
+      claim.appointment_id || null,
+      claim.patient_id || null,
+      claim.member_id,
+      claim.payer_id,
+      claim.service_code || null,
+      claim.diagnosis_code || null,
+      claim.total_amount,
+      claim.copay_amount || 0,
+      claim.insurance_amount || 0,
+      claim.status || 'submitted',
+      claim.x12_claim_id || null,
+      claim.blockchain_proof || null,
+      claim.submitted_at || new Date().toISOString(),
+      claim.response_data || null,
+      claim.circle_transfer_id || null,
+      claim.payment_status || 'pending',
+      claim.payment_amount || null
+    );
+  },
+
+  // Get insurance claim by ID
+  getInsuranceClaim(id) {
+    const stmt = db.prepare('SELECT * FROM insurance_claims WHERE id = ?');
+    return stmt.get(id);
+  },
+
+  // Get insurance claim by idempotency key
+  getInsuranceClaimByIdempotency(idemKey) {
+    const stmt = db.prepare('SELECT * FROM insurance_claims WHERE idempotency_key = ? ORDER BY submitted_at DESC LIMIT 1');
+    return stmt.get(idemKey);
+  },
+
+  // Get claims for an appointment
+  getClaimsByAppointment(appointmentId) {
+    const stmt = db.prepare(`
+      SELECT * FROM insurance_claims
+      WHERE appointment_id = ?
+      ORDER BY submitted_at DESC
+    `);
+    return stmt.all(appointmentId);
+  },
+
+  // Get claims for a patient
+  getClaimsByPatient(patientId) {
+    const stmt = db.prepare(`
+      SELECT * FROM insurance_claims
+      WHERE patient_id = ?
+      ORDER BY submitted_at DESC
+    `);
+    return stmt.all(patientId);
+  },
+
+  getClaimById(claimId) {
+    const stmt = db.prepare(`
+      SELECT * FROM insurance_claims
+      WHERE id = ?
+    `);
+    return stmt.get(claimId);
+  },
+
+  // ============================================
+  // CIRCLE PAYMENT METHODS
+  // ============================================
+
+  // Create Circle account
+  createCircleAccount(account) {
+    const stmt = db.prepare(`
+      INSERT INTO circle_accounts (
+        id, entity_type, entity_id, circle_wallet_id, circle_account_id,
+        currency, status, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    return stmt.run(
+      account.id,
+      account.entity_type,
+      account.entity_id,
+      account.circle_wallet_id,
+      account.circle_account_id || null,
+      account.currency || 'USDC',
+      account.status || 'active',
+      account.created_at || new Date().toISOString(),
+      account.updated_at || new Date().toISOString()
+    );
+  },
+
+  // Get Circle account by entity
+  getCircleAccountByEntity(entityType, entityId) {
+    const stmt = db.prepare(`
+      SELECT * FROM circle_accounts
+      WHERE entity_type = ? AND entity_id = ?
+      ORDER BY created_at DESC
+      LIMIT 1
+    `);
+    return stmt.get(entityType, entityId);
+  },
+
+  // Get Circle account by wallet ID
+  getCircleAccountByWalletId(walletId) {
+    const stmt = db.prepare(`
+      SELECT * FROM circle_accounts
+      WHERE circle_wallet_id = ?
+    `);
+    return stmt.get(walletId);
+  },
+
+  // Create Circle transfer
+  createCircleTransfer(transfer) {
+    const stmt = db.prepare(`
+      INSERT INTO circle_transfers (
+        id, claim_id, from_wallet_id, to_wallet_id, amount, currency,
+        circle_transfer_id, status, error_message, created_at, completed_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    return stmt.run(
+      transfer.id,
+      transfer.claim_id || null,
+      transfer.from_wallet_id,
+      transfer.to_wallet_id,
+      transfer.amount,
+      transfer.currency || 'USDC',
+      transfer.circle_transfer_id || null,
+      transfer.status || 'pending',
+      transfer.error_message || null,
+      transfer.created_at || new Date().toISOString(),
+      transfer.completed_at || null
+    );
+  },
+
+  // Update Circle transfer
+  updateCircleTransfer(id, updates) {
+    const fields = [];
+    const values = [];
+
+    if (updates.status !== undefined) {
+      fields.push('status = ?');
+      values.push(updates.status);
+    }
+    if (updates.circle_transfer_id !== undefined) {
+      fields.push('circle_transfer_id = ?');
+      values.push(updates.circle_transfer_id);
+    }
+    if (updates.error_message !== undefined) {
+      fields.push('error_message = ?');
+      values.push(updates.error_message);
+    }
+    if (updates.completed_at !== undefined) {
+      fields.push('completed_at = ?');
+      values.push(updates.completed_at);
+    }
+
+    if (fields.length === 0) {
+      return { changes: 0 };
+    }
+
+    values.push(id);
+    const query = `UPDATE circle_transfers SET ${fields.join(', ')} WHERE id = ?`;
+    return db.prepare(query).run(...values);
+  },
+
+  // Get Circle transfer by ID
+  getCircleTransfer(id) {
+    const stmt = db.prepare(`
+      SELECT * FROM circle_transfers
+      WHERE id = ?
+    `);
+    return stmt.get(id);
+  },
+
+  // Get Circle transfer by Circle transfer ID
+  getCircleTransferByCircleId(circleTransferId) {
+    const stmt = db.prepare(`
+      SELECT * FROM circle_transfers
+      WHERE circle_transfer_id = ?
+    `);
+    return stmt.get(circleTransferId);
+  },
+
+  // Get Circle transfers by claim ID
+  getCircleTransfersByClaim(claimId) {
+    const stmt = db.prepare(`
+      SELECT * FROM circle_transfers
+      WHERE claim_id = ?
+      ORDER BY created_at DESC
+    `);
+    return stmt.all(claimId);
+  },
+
+  // Update insurance claim
+  updateInsuranceClaim(id, updates) {
+    const fields = [];
+    const values = [];
+
+    if (updates.status !== undefined) {
+      fields.push('status = ?');
+      values.push(updates.status);
+    }
+    if (updates.status_checked_at !== undefined) {
+      fields.push('status_checked_at = ?');
+      values.push(updates.status_checked_at);
+    }
+    if (updates.approved_at !== undefined) {
+      fields.push('approved_at = ?');
+      values.push(updates.approved_at);
+    }
+    if (updates.paid_at !== undefined) {
+      fields.push('paid_at = ?');
+      values.push(updates.paid_at);
+    }
+    if (updates.response_data !== undefined) {
+      fields.push('response_data = ?');
+      values.push(updates.response_data);
+    }
+    if (updates.circle_transfer_id !== undefined) {
+      fields.push('circle_transfer_id = ?');
+      values.push(updates.circle_transfer_id);
+    }
+    if (updates.payment_status !== undefined) {
+      fields.push('payment_status = ?');
+      values.push(updates.payment_status);
+    }
+    if (updates.payment_amount !== undefined) {
+      fields.push('payment_amount = ?');
+      values.push(updates.payment_amount);
+    }
+
+    if (fields.length === 0) {
+      return { changes: 0 };
+    }
+
+    values.push(id);
+
+    const query = `
+      UPDATE insurance_claims
+      SET ${fields.join(', ')}
+      WHERE id = ?
+    `;
+
+    const stmt = db.prepare(query);
+    return stmt.run(...values);
+  },
+
+  // Get all claims with optional filters
+  getAllClaims(filters = {}) {
+    let query = 'SELECT * FROM insurance_claims WHERE 1=1';
+    const params = [];
+
+    if (filters.status) {
+      query += ' AND status = ?';
+      params.push(filters.status);
+    }
+
+    if (filters.patient_id) {
+      query += ' AND patient_id = ?';
+      params.push(filters.patient_id);
+    }
+
+    if (filters.appointment_id) {
+      query += ' AND appointment_id = ?';
+      params.push(filters.appointment_id);
+    }
+
+    query += ' ORDER BY submitted_at DESC';
+
+    const stmt = db.prepare(query);
+    return stmt.all(...params);
+  },
+
+  // ============================================
+  // PAYER CACHE
+  // ============================================
+
+  // Upsert payer to cache
+  upsertPayer(payer) {
+    const stmt = db.prepare(`
+      INSERT INTO insurance_payers (id, payer_id, payer_name, aliases, supported_transactions, is_active, last_updated)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(payer_id) DO UPDATE SET
+        payer_name = excluded.payer_name,
+        aliases = excluded.aliases,
+        supported_transactions = excluded.supported_transactions,
+        is_active = excluded.is_active,
+        last_updated = excluded.last_updated
+    `);
+    return stmt.run(
+      payer.id,
+      payer.payer_id,
+      payer.payer_name,
+      payer.aliases ? JSON.stringify(payer.aliases) : null,
+      payer.supported_transactions ? JSON.stringify(payer.supported_transactions) : null,
+      payer.is_active !== undefined ? (payer.is_active ? 1 : 0) : 1,
+      new Date().toISOString()
+    );
+  },
+
+  // Get payer by payer_id
+  getPayerByPayerId(payerId) {
+    const stmt = db.prepare('SELECT * FROM insurance_payers WHERE payer_id = ? AND is_active = 1');
+    return stmt.get(payerId);
+  },
+
+  // Search payers by name (fuzzy search)
+  searchPayersByName(searchTerm) {
+    const stmt = db.prepare(`
+      SELECT * FROM insurance_payers
+      WHERE (payer_name LIKE ? OR aliases LIKE ?)
+      AND is_active = 1
+      ORDER BY payer_name
+      LIMIT 50
+    `);
+    return stmt.all(`%${searchTerm}%`, `%${searchTerm}%`);
+  },
+
+  // Get all cached payers
+  getAllCachedPayers(limit = 1000) {
+    const stmt = db.prepare(`
+      SELECT * FROM insurance_payers
+      WHERE is_active = 1
+      ORDER BY payer_name
+      LIMIT ?
+    `);
+    return stmt.all(limit);
+  },
+
+  // Get payer cache count
+  getPayerCacheCount() {
+    const stmt = db.prepare('SELECT COUNT(*) as count FROM insurance_payers WHERE is_active = 1');
+    return stmt.get().count;
+  },
+
+  // ============================================
+  // PATIENT INSURANCE
+  // ============================================
+
+  // Create or update patient insurance
+  upsertPatientInsurance(insurance) {
+    // Check if patient already has this insurance
+    const existing = db.getPatientInsurance(insurance.patient_id, insurance.member_id);
+
+    if (existing) {
+      // Update existing
+      const stmt = db.prepare(`
+        UPDATE patient_insurance
+        SET payer_id = ?,
+            payer_name = ?,
+            group_number = ?,
+            plan_name = ?,
+            relationship_code = ?,
+            is_primary = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `);
+      return stmt.run(
+        insurance.payer_id,
+        insurance.payer_name || null,
+        insurance.group_number || null,
+        insurance.plan_name || null,
+        insurance.relationship_code || 'self',
+        insurance.is_primary !== undefined ? (insurance.is_primary ? 1 : 0) : 1,
+        existing.id
+      );
+    } else {
+      // Create new
+      const stmt = db.prepare(`
+        INSERT INTO patient_insurance (
+          id, patient_id, payer_id, payer_name, member_id,
+          group_number, plan_name, relationship_code, is_primary
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      return stmt.run(
+        insurance.id,
+        insurance.patient_id,
+        insurance.payer_id,
+        insurance.payer_name || null,
+        insurance.member_id,
+        insurance.group_number || null,
+        insurance.plan_name || null,
+        insurance.relationship_code || 'self',
+        insurance.is_primary !== undefined ? (insurance.is_primary ? 1 : 0) : 1
+      );
+    }
+  },
+
+  // Get patient insurance by patient_id and member_id
+  getPatientInsurance(patientId, memberId = null) {
+    if (memberId) {
+      const stmt = db.prepare(`
+        SELECT * FROM patient_insurance
+        WHERE patient_id = ? AND member_id = ?
+        ORDER BY is_primary DESC, created_at DESC
+        LIMIT 1
+      `);
+      return stmt.get(patientId, memberId);
+    } else {
+      // Get primary insurance
+      const stmt = db.prepare(`
+        SELECT * FROM patient_insurance
+        WHERE patient_id = ? AND is_primary = 1
+        ORDER BY created_at DESC
+        LIMIT 1
+      `);
+      return stmt.get(patientId);
+    }
+  },
+
+  // Get all insurance for a patient
+  getAllPatientInsurance(patientId) {
+    const stmt = db.prepare(`
+      SELECT * FROM patient_insurance
+      WHERE patient_id = ?
+      ORDER BY is_primary DESC, created_at DESC
+    `);
+    return stmt.all(patientId);
+  },
+
+  // Verify patient insurance
+  verifyPatientInsurance(insuranceId) {
+    const stmt = db.prepare(`
+      UPDATE patient_insurance
+      SET is_verified = 1,
+          verified_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    return stmt.run(insuranceId);
+  },
+
+  // ============================================
+  // EHR INTEGRATION
+  // ============================================
+
+  // Get EHR connection
+  getEHRConnection(connectionId) {
+    return db.prepare('SELECT * FROM ehr_connections WHERE id = ?').get(connectionId);
+  },
+
+  // Get EHR connections by provider
+  getEHRConnectionsByProvider(providerId) {
+    return db.prepare('SELECT * FROM ehr_connections WHERE provider_id = ? ORDER BY connected_at DESC').all(providerId);
+  },
+
+  // Get active EHR connections
+  getActiveEHRConnections() {
+    return db.prepare(`
+      SELECT * FROM ehr_connections 
+      WHERE access_token IS NOT NULL 
+        AND (expires_at IS NULL OR expires_at > datetime('now'))
+        AND connected_at IS NOT NULL
+    `).all();
+  },
+
+  // Get EHR encounter by FHIR ID
+  getEHREncounterByFHIRId(fhirEncounterId) {
+    return db.prepare('SELECT * FROM ehr_encounters WHERE fhir_encounter_id = ?').get(fhirEncounterId);
+  },
+
+  // Get EHR encounters by appointment
+  getEHREncountersByAppointment(appointmentId) {
+    return db.prepare(`
+      SELECT * FROM ehr_encounters 
+      WHERE appointment_id = ? 
+      ORDER BY start_time DESC
+    `).all(appointmentId);
+  },
+
+  // Get EHR encounters by patient
+  getEHREncountersByPatient(patientId) {
+    return db.prepare(`
+      SELECT * FROM ehr_encounters 
+      WHERE patient_id = ? 
+      ORDER BY start_time DESC
+    `).all(patientId);
+  },
+
+  // Get conditions (ICD-10) for encounter
+  getEHRConditions(encounterId) {
+    return db.prepare(`
+      SELECT * FROM ehr_conditions 
+      WHERE ehr_encounter_id = ? 
+      ORDER BY is_primary DESC, created_at
+    `).all(encounterId);
+  },
+
+  // Get procedures (CPT) for encounter
+  getEHRProcedures(encounterId) {
+    return db.prepare(`
+      SELECT * FROM ehr_procedures 
+      WHERE ehr_encounter_id = ? 
+      ORDER BY created_at
+    `).all(encounterId);
+  },
+
+  // Get observations for encounter
+  getEHRObservations(encounterId) {
+    return db.prepare(`
+      SELECT * FROM ehr_observations 
+      WHERE ehr_encounter_id = ? 
+      ORDER BY created_at
+    `).all(encounterId);
+  },
+
+  // Get EHR summary for appointment
+  getEHRSummaryForAppointment(appointmentId) {
+    const encounter = db.prepare(`
+      SELECT * FROM ehr_encounters 
+      WHERE appointment_id = ? 
+      LIMIT 1
+    `).get(appointmentId);
+
+    if (!encounter) {
+      return null;
+    }
+
+    return {
+      encounter,
+      conditions: this.getEHRConditions(encounter.id),
+      procedures: this.getEHRProcedures(encounter.id),
+      observations: this.getEHRObservations(encounter.id)
+    };
+  },
+
+  // Get EHR summary for patient
+  getEHRSummaryForPatient(patientId) {
+    const encounters = this.getEHREncountersByPatient(patientId);
+
+    return encounters.map(encounter => ({
+      encounter,
+      conditions: this.getEHRConditions(encounter.id),
+      procedures: this.getEHRProcedures(encounter.id),
+      observations: this.getEHRObservations(encounter.id)
+    }));
+  },
+
   // Database reference for direct access
   db
+};
+
+// ============================================
+// KNOWLEDGE BASE EXTENSIONS
+// ============================================
+
+module.exports.bulkUpsertCptCodes = function bulkUpsertCptCodes(items = []) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return { inserted: 0 };
+  }
+
+  const stmt = db.prepare(`
+    INSERT INTO cpt_codes (code, description, category, subcategory, is_new)
+    VALUES (@code, @description, @category, @subcategory, @is_new)
+    ON CONFLICT(code) DO UPDATE SET
+      description = excluded.description,
+      category = excluded.category,
+      subcategory = excluded.subcategory,
+      is_new = excluded.is_new,
+      updated_at = datetime('now')
+  `);
+
+  const insertMany = db.transaction((codes) => {
+    for (const item of codes) {
+      if (!item || !item.code || !item.description) continue;
+      stmt.run({
+        code: String(item.code).toUpperCase(),
+        description: item.description,
+        category: item.category || null,
+        subcategory: item.subcategory || null,
+        is_new: item.is_new ? 1 : 0
+      });
+    }
+  });
+
+  insertMany(items);
+  return { inserted: items.length };
+};
+
+module.exports.searchCptCodes = function searchCptCodes(query, limit = 10) {
+  if (!query || !query.trim()) return [];
+  const term = `%${query.trim().toLowerCase()}%`;
+  return db.prepare(`
+    SELECT code, description, category, subcategory
+    FROM cpt_codes
+    WHERE LOWER(code) LIKE ? OR LOWER(description) LIKE ?
+    ORDER BY CASE WHEN LOWER(code) LIKE ? THEN 0 ELSE 1 END,
+             description
+    LIMIT ?
+  `).all(term, term, term, limit);
+};
+
+module.exports.getCptCodesByCodes = function getCptCodesByCodes(codes = []) {
+  if (!Array.isArray(codes) || codes.length === 0) return [];
+  const normalized = codes
+    .map(code => String(code || '').trim().toUpperCase())
+    .filter(code => code.length > 0);
+
+  if (normalized.length === 0) return [];
+
+  const placeholders = normalized.map(() => '?').join(', ');
+  return db.prepare(
+    `SELECT code, description, category, subcategory FROM cpt_codes WHERE code IN (${placeholders})`
+  ).all(...normalized);
 };

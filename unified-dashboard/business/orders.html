@@ -496,6 +496,110 @@
             margin-bottom: 16px;
         }
 
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--gray-500);
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--gray-100);
+            color: var(--gray-900);
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .record-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .record-card {
+            background: var(--gray-50);
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .record-card h4 {
+            margin: 0 0 12px 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .record-kv {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            row-gap: 8px;
+            column-gap: 12px;
+            font-size: 14px;
+        }
+
+        .record-kv div:first-child {
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        .record-full-width {
+            grid-column: 1 / -1;
+        }
+
         @media (max-width: 768px) {
             .sidebar {
                 width: 100%;
@@ -548,11 +652,7 @@
                     <span class="nav-icon">📅</span>
                     <span>Calendar</span>
                 </a>
-                <a href="records.html" class="nav-item">
-                    <span class="nav-icon">📁</span>
-                    <span>Records</span>
-                </a>
-                <a href="orders.html" class="nav-item active">
+                <a href="billing.html" class="nav-item active">
                     <span class="nav-icon">💳</span>
                     <span>Billing</span>
                 </a>
@@ -589,6 +689,44 @@
             <div class="page-header">
                 <h1 class="page-title">Billing</h1>
                 <p class="page-subtitle">Aggregated by unique client record.</p>
+            </div>
+
+            <!-- Coverage Summary (visible when ?patientId=FHIR_ID) -->
+            <div class="stat-card" id="coverageSummaryCard" style="display:none; margin-bottom:24px;">
+                <div class="stat-header">
+                    <span class="stat-title">Coverage Summary</span>
+                    <span class="stat-icon">🧾</span>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+                    <div>
+                        <div style="font-size:12px;color:#64748b;">Provider</div>
+                        <div style="font-weight:700;" id="covProvider">—</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:#64748b;">Eligibility</div>
+                        <div style="font-weight:700;" id="covEligible">—</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:#64748b;">Copay (this visit)</div>
+                        <div style="font-weight:700;" id="covCopay">—</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:#64748b;">Deductible (total / remaining)</div>
+                        <div style="font-weight:700;" id="covDeductible">—</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:#64748b;">Coinsurance</div>
+                        <div style="font-weight:700;" id="covCoins">—</div>
+                    </div>
+                </div>
+                <div style="margin-top:12px;">
+                    <div style="font-size:12px;color:#64748b;">Plan Summary</div>
+                    <div id="covPlanSummary" style="white-space:pre-wrap;">—</div>
+                </div>
+                <div style="margin-top:12px;">
+                    <div style="font-size:12px;color:#64748b;">Estimated Patient Responsibility</div>
+                    <div id="covResponsibility" style="font-weight:700;">—</div>
+                </div>
             </div>
 
             <!-- Stats Grid -->
@@ -647,8 +785,50 @@
         </main>
     </div>
 
+    <!-- Record Modal -->
+    <div class="modal-overlay" id="recordModal" onclick="if(event.target===this) closeRecordModal()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Client Record</h2>
+                <button class="modal-close" onclick="closeRecordModal()">×</button>
+            </div>
+            <div class="modal-body" id="recordModalBody">
+                <div style="text-align:center;padding:40px;">Loading...</div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE = window.API_BASE || 'http://localhost:4000';
+        function getPatientId() { try { return new URLSearchParams(window.location.search).get('patientId'); } catch (_) { return null; } }
+        function fmtMoney(v){ return (v!=null) ? `$${Number(v).toFixed(2)}` : '—'; }
+
+        async function loadCoverage() {
+            const pid = getPatientId();
+            if (!pid) return;
+            document.getElementById('coverageSummaryCard').style.display = 'block';
+            try {
+                const [insRes, eligRes] = await Promise.all([
+                    fetch(`${API_BASE}/api/admin/patients/${encodeURIComponent(pid)}/insurance`).then(r=>r.json()),
+                    fetch(`${API_BASE}/api/admin/patients/${encodeURIComponent(pid)}/eligibility`).then(r=>r.json())
+                ]);
+                if (insRes.success && Array.isArray(insRes.insurance) && insRes.insurance.length) {
+                    const primary = insRes.insurance.find(i=>i.is_primary) || insRes.insurance[0];
+                    document.getElementById('covProvider').textContent = primary.payer_name || primary.payer_id || '—';
+                }
+                if (eligRes.success && Array.isArray(eligRes.eligibility) && eligRes.eligibility.length) {
+                    const e = eligRes.eligibility[0];
+                    document.getElementById('covEligible').textContent = e.eligible ? 'Active' : 'Inactive';
+                    document.getElementById('covCopay').textContent = fmtMoney(e.copay_amount);
+                    const dTot = (e.deductible_total != null) ? fmtMoney(e.deductible_total) : '—';
+                    const dRem = (e.deductible_remaining != null) ? fmtMoney(e.deductible_remaining) : '—';
+                    document.getElementById('covDeductible').textContent = `${dTot} / ${dRem}`;
+                    document.getElementById('covCoins').textContent = (e.coinsurance_percent != null) ? `${e.coinsurance_percent}%` : '—';
+                    document.getElementById('covPlanSummary').textContent = e.plan_summary || '—';
+                    document.getElementById('covResponsibility').textContent = fmtMoney(e.copay_amount || 0);
+                }
+            } catch (e) { console.warn('coverage load failed', e); }
+        }
         let userData = null;
         let billingRows = [];
 
@@ -661,6 +841,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadUserInfo();
             loadBilling();
+            loadCoverage();
         });
 
         function loadUserInfo() {
@@ -758,7 +939,7 @@
             </div>
 
             <div class="order-actions">
-                <a class="btn btn-secondary btn-sm" href="records.html?id=${encodeURIComponent(row.patient_id || '')}">📄 View Record</a>
+                <button class="btn btn-secondary btn-sm" onclick="openRecordModal('${row.patient_id || ''}')">📄 View Record</button>
                 <a class="btn btn-primary btn-sm" href="patients.html">👥 Clients</a>
             </div>
         </div>`;
@@ -808,6 +989,120 @@
             sessionStorage.clear();
             window.location.href = '../index.html';
         }
+
+        // Record Modal Functions
+        async function openRecordModal(patientId) {
+            if (!patientId) {
+                alert('Patient ID not available');
+                return;
+            }
+            
+            const modal = document.getElementById('recordModal');
+            const body = document.getElementById('recordModalBody');
+            modal.classList.add('active');
+            body.innerHTML = '<div style="text-align:center;padding:40px;">Loading...</div>';
+            
+            try {
+                // Fetch patient data
+                const [patientRes, insRes, eligRes, apptRes] = await Promise.all([
+                    fetch(`${API_BASE}/fhir/Patient/${encodeURIComponent(patientId)}`).then(r => r.ok ? r.json() : null).catch(() => null),
+                    fetch(`${API_BASE}/api/admin/patients/${encodeURIComponent(patientId)}/insurance`).then(r => r.json()).catch(() => ({success: false})),
+                    fetch(`${API_BASE}/api/admin/patients/${encodeURIComponent(patientId)}/eligibility`).then(r => r.json()).catch(() => ({success: false})),
+                    fetch(`${API_BASE}/voice/appointments/search`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ args: { patient_id: patientId } })
+                    }).then(r => r.json()).catch(() => ({success: false}))
+                ]);
+                
+                // Extract patient info
+                const patient = patientRes || {};
+                const nameObj = (patient.name && patient.name[0]) || {};
+                const fullName = `${(nameObj.given||[''])[0]} ${nameObj.family||''}`.trim() || 'Unknown';
+                const telecom = patient.telecom || [];
+                const phone = (telecom.find(t => t.system==='phone')||{}).value || '—';
+                const email = (telecom.find(t => t.system==='email')||{}).value || '—';
+                const addr = (patient.address && patient.address[0]) || {};
+                const addrStr = [addr.line && addr.line[0], addr.city, addr.state, addr.postalCode].filter(Boolean).join(', ') || '—';
+                
+                // Extract insurance info
+                let insProvider = '—', insMember = '—', insEligible = '—', insCopay = '—', insDeductible = '—', insCoinsurance = '—', insPlan = '—';
+                if (insRes.success && Array.isArray(insRes.insurance) && insRes.insurance.length) {
+                    const primary = insRes.insurance.find(i => i.is_primary) || insRes.insurance[0];
+                    insProvider = primary.payer_name || primary.payer_id || '—';
+                    insMember = primary.member_id || '—';
+                }
+                if (eligRes.success && Array.isArray(eligRes.eligibility) && eligRes.eligibility.length) {
+                    const e = eligRes.eligibility[0];
+                    insEligible = e.eligible ? 'Active' : 'Inactive';
+                    insCopay = (e.copay_amount != null) ? `$${e.copay_amount}` : '—';
+                    const dTot = (e.deductible_total != null) ? `$${e.deductible_total}` : '—';
+                    const dRem = (e.deductible_remaining != null) ? `$${e.deductible_remaining}` : '—';
+                    insDeductible = `${dTot} / ${dRem}`;
+                    insCoinsurance = (e.coinsurance_percent != null) ? `${e.coinsurance_percent}%` : '—';
+                    insPlan = e.plan_summary || '—';
+                }
+                
+                // Extract appointments
+                const appts = (apptRes.success && apptRes.appointments) ? apptRes.appointments : [];
+                const apptList = appts.length > 0 
+                    ? appts.map(a => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-200);"><div>${a.appointment_type || 'Consultation'} — <span style="padding:2px 8px;background:var(--gray-100);border-radius:12px;font-size:12px;">${a.status}</span></div><div>${a.datetime_display || ''}</div></div>`).join('')
+                    : '<div style="padding:16px;text-align:center;color:var(--gray-500);">No appointments yet.</div>';
+                
+                // Render modal content
+                body.innerHTML = `
+                    <div class="record-grid">
+                        <div class="record-card">
+                            <h4>Demographics</h4>
+                            <div class="record-kv">
+                                <div>Full Name</div><div>${fullName}</div>
+                                <div>Phone</div><div>${phone}</div>
+                                <div>Email</div><div>${email}</div>
+                                <div>Birth Date</div><div>${patient.birthDate || '—'}</div>
+                                <div>Address</div><div>${addrStr}</div>
+                            </div>
+                        </div>
+                        <div class="record-card">
+                            <h4>Identifiers</h4>
+                            <div class="record-kv">
+                                <div>FHIR Patient ID</div><div>${patientId}</div>
+                                <div>Record Number</div><div>${patientId}</div>
+                            </div>
+                        </div>
+                        <div class="record-card record-full-width">
+                            <h4>Insurance & Coverage</h4>
+                            <div class="record-kv">
+                                <div>Provider</div><div>${insProvider}</div>
+                                <div>Member ID</div><div>${insMember}</div>
+                                <div>Eligibility</div><div>${insEligible}</div>
+                                <div>Copay</div><div>${insCopay}</div>
+                                <div>Deductible</div><div>${insDeductible}</div>
+                                <div>Coinsurance</div><div>${insCoinsurance}</div>
+                            </div>
+                            ${insPlan !== '—' ? `<div style="margin-top:12px;"><div style="color:var(--gray-600);font-size:12px;">Plan Summary</div><div style="white-space:pre-wrap;font-size:14px;">${insPlan}</div></div>` : ''}
+                        </div>
+                        <div class="record-card record-full-width">
+                            <h4>Appointments</h4>
+                            ${apptList}
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading record:', error);
+                body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--danger);">Failed to load record. Please try again.</div>';
+            }
+        }
+        
+        function closeRecordModal() {
+            document.getElementById('recordModal').classList.remove('active');
+        }
+        
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeRecordModal();
+            }
+        });
     </script>
 </body>
 

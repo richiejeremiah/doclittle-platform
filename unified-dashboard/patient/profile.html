@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - DocLittle Patient Portal</title>
+    <link rel="stylesheet" href="../assets/css/global.css">
+    <script src="../assets/js/config.js"></script>
+    <style>
+        :root {
+            --primary: #0891b2;
+            --primary-dark: #0e7490;
+        }
+
+        body {
+            background: var(--gray-50);
+            min-height: 100vh;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .header {
+            max-width: 700px;
+            margin: 0 auto 24px;
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--gray-100);
+            color: var(--gray-700);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-200);
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .profile-card {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .profile-section {
+            margin-bottom: 32px;
+        }
+
+        .profile-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--gray-900);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--gray-900);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--gray-300);
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
+        }
+
+        .form-input:disabled {
+            background: var(--gray-100);
+            cursor: not-allowed;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .message-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .message-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--gray-600);
+        }
+
+        @media (max-width: 640px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1 class="header-title">My Profile</h1>
+        </div>
+        <div>
+            <a href="appointments.html" class="btn btn-secondary">Back to Appointments</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="messageContainer"></div>
+        <div class="profile-card" id="profileCard">
+            <div class="loading">Loading profile...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.API_BASE || 'http://localhost:4000';
+        let sessionId = localStorage.getItem('patient_session_id');
+
+        if (!sessionId) {
+            window.location.href = 'login.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProfile();
+        });
+
+        async function loadProfile() {
+            try {
+                const response = await fetch(`${API_BASE}/api/patient/profile`, {
+                    headers: { 'x-session-id': sessionId }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayProfile(data.profile);
+                } else {
+                    if (data.error && data.error.includes('session')) {
+                        localStorage.removeItem('patient_session_id');
+                        localStorage.removeItem('patient_phone');
+                        window.location.href = 'login.html';
+                    } else {
+                        document.getElementById('profileCard').innerHTML = `
+                            <div class="message message-error">Failed to load profile: ${data.error || 'Unknown error'}</div>
+                        `;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                document.getElementById('profileCard').innerHTML = `
+                    <div class="message message-error">Network error. Please try again.</div>
+                `;
+            }
+        }
+
+        function displayProfile(profile) {
+            const card = document.getElementById('profileCard');
+            card.innerHTML = `
+                <div class="profile-section">
+                    <h2 class="section-title">Personal Information</h2>
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" class="form-input" value="${profile.name || ''}" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date of Birth</label>
+                        <input type="date" class="form-input" value="${profile.birth_date || ''}" disabled>
+                    </div>
+                </div>
+
+                <div class="profile-section">
+                    <h2 class="section-title">Contact Information</h2>
+                    <div class="form-group">
+                        <label class="form-label">Phone Number</label>
+                        <input type="tel" class="form-input" value="${profile.phone || ''}" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" class="form-input" value="${profile.email || ''}" disabled>
+                    </div>
+                </div>
+
+                <div class="profile-section">
+                    <h2 class="section-title">Address</h2>
+                    <div class="form-group">
+                        <label class="form-label">Street Address</label>
+                        <input type="text" class="form-input" value="${profile.address.line || ''}" disabled>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">City</label>
+                            <input type="text" class="form-input" value="${profile.address.city || ''}" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">State</label>
+                            <input type="text" class="form-input" value="${profile.address.state || ''}" disabled>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Postal Code</label>
+                        <input type="text" class="form-input" value="${profile.address.postal_code || ''}" disabled>
+                    </div>
+                </div>
+
+                <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--gray-200);">
+                    <p style="color: var(--gray-600); font-size: 14px; text-align: center;">
+                        To update your information, please contact us at your next appointment or call our office.
+                    </p>
+                </div>
+            `;
+        }
+
+        function showMessage(message, type) {
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = `<div class="message message-${type}">${message}</div>`;
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
+

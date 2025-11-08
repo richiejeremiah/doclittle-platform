@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Today's Schedule - doclittle- AI Voice Receptionist</title>
+    <link rel="stylesheet" href="../../assets/css/global.css">
+    <script src="../../assets/js/config.js"></script>
+    <style>
+        :root {
+            --primary: #0891b2;
+            --primary-dark: #0e7490;
+            --primary-light: #06b6d4;
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .sidebar-logo {
+            font-size: 32px;
+            line-height: 1;
+            letter-spacing: -3px;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-logo .doc {
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+        }
+
+        .sidebar-logo .little {
+            font-family: 'Verdana', Geneva, sans-serif;
+            font-weight: 700;
+        }
+
+        .sidebar-subtitle {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-top: 4px;
+        }
+
+        .sidebar-nav {
+            padding: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--gray-700);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+            text-decoration: none;
+        }
+
+        .nav-item:hover {
+            background: var(--gray-50);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            padding: 32px;
+            background: var(--gray-50);
+        }
+
+        .page-header {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-title {
+            font-size: 28px;
+            margin: 0;
+        }
+
+        .page-date {
+            color: var(--gray-600);
+            font-size: 14px;
+        }
+
+        .refresh-btn {
+            padding: 8px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Next Patient Highlight */
+        .next-patient-card {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            color: white;
+            box-shadow: 0 8px 32px rgba(8, 145, 178, 0.3);
+        }
+
+        .next-patient-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .next-patient-title {
+            font-size: 18px;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+
+        .next-patient-time {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .next-patient-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .next-patient-item {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .next-patient-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 4px;
+        }
+
+        .next-patient-value {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        /* Live Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .stat-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Schedule List */
+        .schedule-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .schedule-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .schedule-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .schedule-count {
+            color: var(--gray-600);
+            font-size: 14px;
+        }
+
+        .schedule-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .schedule-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            border-radius: 8px;
+            border: 2px solid var(--gray-200);
+            transition: all 0.2s;
+        }
+
+        .schedule-item:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(8, 145, 178, 0.1);
+        }
+
+        .schedule-item.current {
+            border-color: var(--primary);
+            background: rgba(8, 145, 178, 0.05);
+        }
+
+        .schedule-item.past {
+            opacity: 0.6;
+            border-color: var(--gray-300);
+        }
+
+        .schedule-time {
+            min-width: 100px;
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--gray-900);
+        }
+
+        .schedule-info {
+            flex: 1;
+        }
+
+        .schedule-patient-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 4px;
+        }
+
+        .schedule-details {
+            font-size: 14px;
+            color: var(--gray-600);
+        }
+
+        .schedule-status {
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px;
+            color: var(--gray-600);
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .pulsing {
+            animation: pulse 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <span class="doc">Doc</span><span class="little">Little</span><span style="font-weight:700;">.</span>
+                </div>
+                <div class="sidebar-subtitle">AI Voice Receptionist</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="../dashboard.html" class="nav-item">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="../patients.html" class="nav-item">
+                    <span class="nav-icon">👥</span>
+                    <span>Clients</span>
+                </a>
+                <a href="../calendar.html" class="nav-item">
+                    <span class="nav-icon">📅</span>
+                    <span>Calendar</span>
+                </a>
+                <a href="../billing.html" class="nav-item">
+                    <span class="nav-icon">💳</span>
+                    <span>Billing</span>
+                </a>
+                <a href="today.html" class="nav-item active">
+                    <span class="nav-icon">📋</span>
+                    <span>Today's Schedule</span>
+                </a>
+                <a href="../agent.html" class="nav-item">
+                    <span class="nav-icon">🎙️</span>
+                    <span>Voice Agent</span>
+                </a>
+                <a href="../treatments.html" class="nav-item">
+                    <span class="nav-icon">🏷️</span>
+                    <span>Treatments</span>
+                </a>
+                <a href="../settings.html" class="nav-item">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Settings</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Today's Schedule</h1>
+                    <div class="page-date" id="currentDate"></div>
+                </div>
+                <button class="refresh-btn" onclick="loadTodaySchedule()">🔄 Refresh</button>
+            </div>
+
+            <!-- Next Patient Card -->
+            <div class="next-patient-card" id="nextPatientCard" style="display: none;">
+                <div class="next-patient-header">
+                    <div class="next-patient-title">Next Patient Up</div>
+                    <div class="next-patient-time" id="nextPatientTime">—</div>
+                </div>
+                <div class="next-patient-info" id="nextPatientInfo"></div>
+            </div>
+
+            <!-- Live Stats -->
+            <div class="stats-grid" id="liveStatsGrid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-label">Total Scheduled</div>
+                    </div>
+                    <div class="stat-value" id="statTotal">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-label">Completed</div>
+                    </div>
+                    <div class="stat-value" id="statCompleted">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-label">In Session</div>
+                    </div>
+                    <div class="stat-value" id="statInSession">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-label">Upcoming (2hrs)</div>
+                    </div>
+                    <div class="stat-value" id="statUpcoming">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-label">No Shows</div>
+                    </div>
+                    <div class="stat-value" id="statNoShows">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-label">Completion Rate</div>
+                    </div>
+                    <div class="stat-value" id="statCompletionRate">0%</div>
+                </div>
+            </div>
+
+            <!-- Schedule List -->
+            <div class="schedule-card">
+                <div class="schedule-header">
+                    <div>
+                        <div class="schedule-title">Today's Appointments</div>
+                        <div class="schedule-count" id="scheduleCount">Loading...</div>
+                    </div>
+                </div>
+                <div class="schedule-list" id="scheduleList">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⏳</div>
+                        <p>Loading schedule...</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = window.API_BASE || 'http://localhost:4000';
+
+        if (sessionStorage.getItem('authenticated') !== 'true') {
+            window.location.href = '../../index.html';
+        }
+
+        // Set current date
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTodaySchedule();
+            loadLiveStats();
+            loadNextPatient();
+            
+            // Auto-refresh every 30 seconds
+            setInterval(() => {
+                loadTodaySchedule();
+                loadLiveStats();
+                loadNextPatient();
+            }, 30000);
+        });
+
+        async function loadTodaySchedule() {
+            try {
+                const response = await fetch(`${API_BASE}/api/provider/today`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displaySchedule(data.schedule);
+                    document.getElementById('scheduleCount').textContent = `${data.count} appointment${data.count !== 1 ? 's' : ''} today`;
+                } else {
+                    throw new Error(data.error || 'Failed to load schedule');
+                }
+            } catch (error) {
+                console.error('Error loading schedule:', error);
+                document.getElementById('scheduleList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">❌</div>
+                        <p>Failed to load schedule. Please refresh.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function displaySchedule(schedule) {
+            const container = document.getElementById('scheduleList');
+
+            if (schedule.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📅</div>
+                        <p>No appointments scheduled for today.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = schedule.map(apt => {
+                const time = new Date(`2000-01-01T${apt.time}`).toLocaleTimeString('en-US', { 
+                    hour: 'numeric', 
+                    minute: '2-digit',
+                    hour12: true 
+                });
+                
+                let statusClass = '';
+                let statusText = apt.status_display || apt.status;
+                let statusBadgeClass = 'badge-success';
+                
+                if (apt.is_current) {
+                    statusClass = 'current';
+                    statusBadgeClass = 'badge-warning';
+                    statusText = 'In Session';
+                } else if (apt.is_past) {
+                    statusClass = 'past';
+                    statusBadgeClass = 'badge-danger';
+                } else if (apt.is_upcoming) {
+                    statusBadgeClass = 'badge-warning';
+                }
+
+                return `
+                    <div class="schedule-item ${statusClass}">
+                        <div class="schedule-time">${time}</div>
+                        <div class="schedule-info">
+                            <div class="schedule-patient-name">${apt.patient_name}</div>
+                            <div class="schedule-details">
+                                ${apt.appointment_type || 'Consultation'} • ${apt.time_until || ''}
+                                ${apt.patient_phone ? ` • ${apt.patient_phone}` : ''}
+                            </div>
+                        </div>
+                        <div class="schedule-status ${statusBadgeClass}">${statusText}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function loadLiveStats() {
+            try {
+                const response = await fetch(`${API_BASE}/api/provider/live-stats`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const stats = data.stats;
+                    document.getElementById('statTotal').textContent = stats.total_scheduled || 0;
+                    document.getElementById('statCompleted').textContent = stats.completed || 0;
+                    document.getElementById('statInSession').textContent = stats.in_session || 0;
+                    document.getElementById('statUpcoming').textContent = stats.upcoming || 0;
+                    document.getElementById('statNoShows').textContent = stats.no_shows || 0;
+                    document.getElementById('statCompletionRate').textContent = `${stats.completion_rate || '0.0'}%`;
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function loadNextPatient() {
+            try {
+                const response = await fetch(`${API_BASE}/api/provider/next-patient`);
+                const data = await response.json();
+
+                if (data.success && data.next_patient) {
+                    const patient = data.next_patient;
+                    const card = document.getElementById('nextPatientCard');
+                    card.style.display = 'block';
+                    
+                    document.getElementById('nextPatientTime').textContent = patient.time_until || 'Soon';
+                    if (patient.is_soon) {
+                        document.getElementById('nextPatientTime').classList.add('pulsing');
+                    }
+                    
+                    const time = new Date(`2000-01-01T${patient.time}`).toLocaleTimeString('en-US', { 
+                        hour: 'numeric', 
+                        minute: '2-digit',
+                        hour12: true 
+                    });
+                    
+                    document.getElementById('nextPatientInfo').innerHTML = `
+                        <div class="next-patient-item">
+                            <div class="next-patient-label">Patient Name</div>
+                            <div class="next-patient-value">${patient.patient_name}</div>
+                        </div>
+                        <div class="next-patient-item">
+                            <div class="next-patient-label">Appointment Time</div>
+                            <div class="next-patient-value">${time}</div>
+                        </div>
+                        <div class="next-patient-item">
+                            <div class="next-patient-label">Type</div>
+                            <div class="next-patient-value">${patient.appointment_type || 'Consultation'}</div>
+                        </div>
+                        ${patient.patient_phone ? `
+                        <div class="next-patient-item">
+                            <div class="next-patient-label">Phone</div>
+                            <div class="next-patient-value">${patient.patient_phone}</div>
+                        </div>
+                        ` : ''}
+                    `;
+                } else {
+                    document.getElementById('nextPatientCard').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading next patient:', error);
+            }
+        }
+    </script>
+</body>
+</html>
+

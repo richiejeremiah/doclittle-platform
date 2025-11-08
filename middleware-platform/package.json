@@ -30,10 +30,15 @@
         "dotenv": "^17.2.3",
         "express": "^4.18.2",
         "googleapis": "^164.1.0",
+        "groq-sdk": "^0.34.0",
+        "multer": "^2.0.2",
+        "nodemailer": "^7.0.10",
+        "pdf-parse": "^1.1.1",
         "stripe": "^14.10.0",
         "twilio": "^4.19.0",
         "uuid": "^9.0.1",
-        "ws": "^8.18.3"
+        "ws": "^8.18.3",
+        "xlsx": "^0.18.5"
     },
     "devDependencies": {
         "nodemon": "^3.0.2"
