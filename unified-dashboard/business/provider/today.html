@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Today's Schedule - doclittle- AI Voice Receptionist</title>
+    <title>Today's Schedule - Medical Coding Assistant</title>
     <link rel="stylesheet" href="../../assets/css/global.css">
     <script src="../../assets/js/config.js"></script>
     <style>
         :root {
-            --primary: #0891b2;
-            --primary-dark: #0e7490;
-            --primary-light: #06b6d4;
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --primary-light: #3b82f6;
         }
 
         .layout {
@@ -355,7 +355,7 @@
                 <div class="sidebar-logo">
                     <span class="doc">Doc</span><span class="little">Little</span><span style="font-weight:700;">.</span>
                 </div>
-                <div class="sidebar-subtitle">AI Voice Receptionist</div>
+                <div class="sidebar-subtitle">Medical Coding Assistant</div>
             </div>
 
             <nav class="sidebar-nav">
@@ -475,7 +475,7 @@
         const API_BASE = window.API_BASE || 'http://localhost:4000';
 
         if (sessionStorage.getItem('authenticated') !== 'true') {
-            window.location.href = '../../index.html';
+            window.location.href = '../../login.html';
         }
 
         // Set current date
