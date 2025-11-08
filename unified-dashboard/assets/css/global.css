@@ -1,5 +1,5 @@
 /* ============================================
-   GLOBAL STYLES - doclittle- AI Voice Receptionist
+   GLOBAL STYLES - Medical Coding Assistant
    ============================================ */
 
 * {
@@ -9,11 +9,12 @@
 }
 
 :root {
-    /* Brand Colors */
-    --primary: #667eea;
-    --primary-dark: #5568d3;
-    --secondary: #764ba2;
-    --accent: #f093fb;
+    /* Brand Colors - Fintech Blue */
+    --primary: #1e40af;
+    --primary-dark: #1e3a8a;
+    --primary-light: #3b82f6;
+    --secondary: #2563eb;
+    --accent: #60a5fa;
 
     /* Status Colors */
     --success: #48bb78;

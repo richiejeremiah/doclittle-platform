@@ -35,6 +35,7 @@ const PatientPortalService = require('./services/patient-portal-service');
 const EHRAggregatorService = require('./services/ehr-aggregator-service');
 const EHRSyncService = require('./services/ehr-sync-service');
 const EpicAdapter = require('./services/epic-adapter');
+const CircleService = require('./services/circle-service');
 
 // Make Twilio optional - only initialize if configured
 let twilio = null;
@@ -1128,7 +1129,55 @@ app.post('/api/auth/login', async (req, res) => {
       });
     }
 
-    // Check database first
+    // Check demo accounts FIRST (for testing accounts)
+    const demoAccounts = {
+      'insurer@doclittle.com': {
+        password: 'demo123',
+        name: 'Insurer Admin',
+        role: 'insurer_admin',
+        merchant_id: null
+      },
+      'provider@doclittle.com': {
+        password: 'demo123',
+        name: 'Healthcare Provider',
+        role: 'healthcare_provider',
+        merchant_id: 'd10794ff-ca11-4e6f-93e9-560162b4f884'
+      },
+      'patient@doclittle.com': {
+        password: 'demo123',
+        name: 'Patient Wallet',
+        role: 'patient',
+        merchant_id: null
+      },
+      'admin@platform.com': {
+        password: 'admin123',
+        name: 'Platform Admin',
+        role: 'platform_admin',
+        merchant_id: null
+      }
+    };
+
+    const demoAccount = demoAccounts[email];
+
+    // If it's a demo account, check demo password first
+    if (demoAccount && demoAccount.password === password) {
+      const session = {
+        email: email,
+        name: demoAccount.name,
+        role: demoAccount.role,
+        merchant_id: demoAccount.merchant_id,
+        token: Buffer.from(email).toString('base64')
+      };
+
+      console.log(`✅ Demo account login: ${email}`);
+
+      return res.json({
+        success: true,
+        user: session
+      });
+    }
+
+    // Check database for other users
     const user = db.getUserByEmail(email);
 
     if (user && user.password_hash) {
@@ -1165,41 +1214,6 @@ app.post('/api/auth/login', async (req, res) => {
       };
 
       console.log(`✅ User logged in: ${email}`);
-
-      return res.json({
-        success: true,
-        user: session
-      });
-    }
-
-    // Fall back to demo accounts for testing
-    const demoAccounts = {
-      'provider@doclittle.com': {
-        password: 'demo123',
-        name: 'Healthcare Provider',
-        role: 'healthcare_provider',
-        merchant_id: 'd10794ff-ca11-4e6f-93e9-560162b4f884'
-      },
-      'admin@platform.com': {
-        password: 'admin123',
-        name: 'Platform Admin',
-        role: 'platform_admin',
-        merchant_id: null
-      }
-    };
-
-    const demoAccount = demoAccounts[email];
-
-    if (demoAccount && demoAccount.password === password) {
-      const session = {
-        email: email,
-        name: demoAccount.name,
-        role: demoAccount.role,
-        merchant_id: demoAccount.merchant_id,
-        token: Buffer.from(email).toString('base64')
-      };
-
-      console.log(`✅ Demo account login: ${email}`);
 
       return res.json({
         success: true,
@@ -2037,6 +2051,665 @@ app.post('/voice/insurance/check-claim-status', async (req, res) => {
 });
 
 /**
+ * Create claim from PDF coding data
+ * POST /api/claims/create-from-pdf
+ */
+app.post('/api/claims/create-from-pdf', async (req, res) => {
+  try {
+    console.log('\n📄 Creating claim from PDF coding data');
+    const { patientId, coding, pricing, pdfText, fileName } = req.body;
+
+    if (!patientId || !coding) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: patientId and coding are required'
+      });
+    }
+
+    // Get patient info
+    const patient = db.getFHIRPatient(patientId);
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        error: 'Patient not found'
+      });
+    }
+
+    const patientData = typeof patient.resource_data === 'string'
+      ? JSON.parse(patient.resource_data)
+      : patient.resource_data;
+
+    const name = patientData.name?.[0];
+    const patientName = name
+      ? `${(name.given || []).join(' ')} ${name.family || ''}`.trim()
+      : 'Unknown Patient';
+
+    // Get latest eligibility check for insurance info
+    const eligibility = db.getEligibilityChecksByPatient(patientId) || [];
+    const latestEligibility = eligibility[0] || null;
+
+    // Extract ICD-10 and CPT codes
+    const icd10Codes = coding.icd10 || [];
+    const cptCodes = pricing.breakdown || [];
+
+    // Calculate totals
+    const totalAmountBilled = pricing.breakdown?.reduce((sum, item) => sum + (parseFloat(item.charge) || 0), 0) || 0;
+    const totalAllowedAmount = pricing.breakdown?.reduce((sum, item) => sum + (parseFloat(item.allowed_amount) || 0), 0) || 0;
+
+    // Create claim ID
+    const claimId = `claim-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Prepare claim data
+    const claimData = {
+      id: claimId,
+      appointment_id: null, // No appointment for PDF-based claims
+      patient_id: patientId,
+      member_id: latestEligibility?.member_id || 'N/A',
+      payer_id: latestEligibility?.payer_id || 'N/A',
+      service_code: cptCodes.map(c => c.code).join(', ') || 'N/A',
+      diagnosis_code: icd10Codes.map(d => d.code || d).join(', ') || 'N/A',
+      total_amount: totalAmountBilled,
+      copay_amount: latestEligibility?.copay_amount || 0,
+      insurance_amount: latestEligibility?.allowed_amount || 0,
+      status: 'draft', // Start as draft, can be submitted later
+      response_data: JSON.stringify({
+        coding,
+        pricing,
+        pdfText: pdfText?.substring(0, 1000), // Store first 1000 chars of PDF text
+        fileName,
+        createdFrom: 'pdf-coding',
+        createdAt: new Date().toISOString()
+      })
+    };
+
+    // Save claim to database
+    db.createInsuranceClaim(claimData);
+
+    console.log(`✅ Claim created: ${claimId}`);
+
+    res.json({
+      success: true,
+      claimId: claimId,
+      message: 'Claim created successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error creating claim from PDF:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Get claim by ID with real Stedi data and EOB calculations
+ * GET /api/claims/:id
+ */
+app.get('/api/claims/:id', async (req, res) => {
+  try {
+    const claimId = req.params.id;
+    const claim = db.getClaimById(claimId);
+
+    if (!claim) {
+      return res.status(404).json({
+        success: false,
+        error: 'Claim not found'
+      });
+    }
+
+    // Get patient info from FHIR
+    let patientData = null;
+    let patientName = 'Unknown Patient';
+    let subscriberId = claim.member_id || 'N/A';
+    let groupNumber = 'N/A';
+
+    if (claim.patient_id) {
+      const patient = db.getFHIRPatient(claim.patient_id);
+      if (patient) {
+        patientData = typeof patient.resource_data === 'string'
+          ? JSON.parse(patient.resource_data)
+          : patient.resource_data;
+
+        // Extract patient name
+        const name = patientData.name?.[0];
+        if (name) {
+          patientName = `${(name.given || []).join(' ')} ${name.family || ''}`.trim();
+        }
+      }
+    }
+
+    // Get REAL Stedi eligibility data (most recent)
+    let eligibility = null;
+    let planSummary = 'N/A';
+    let payerName = 'N/A';
+
+    if (claim.patient_id) {
+      const eligibilityChecks = db.getEligibilityChecksByPatient(claim.patient_id) || [];
+      eligibility = eligibilityChecks[0] || null; // Most recent eligibility check
+
+      if (eligibility) {
+        // Parse response_data if it's a string to get full Stedi response
+        if (eligibility.response_data) {
+          try {
+            const stediResponse = typeof eligibility.response_data === 'string'
+              ? JSON.parse(eligibility.response_data)
+              : eligibility.response_data;
+
+            // Extract additional info from Stedi response
+            planSummary = eligibility.plan_summary || stediResponse.plan_summary || stediResponse.plan_name || 'N/A';
+            payerName = stediResponse.payer_name || eligibility.payer_id || 'N/A';
+            subscriberId = eligibility.member_id || subscriberId;
+          } catch (e) {
+            console.warn('Could not parse eligibility response_data:', e.message);
+          }
+        }
+
+        // Use plan_summary from database if available
+        if (eligibility.plan_summary) {
+          planSummary = eligibility.plan_summary;
+        }
+      }
+    }
+
+    // Parse claim response_data to get coding and pricing
+    let claimDetails = {};
+    if (claim.response_data) {
+      try {
+        claimDetails = typeof claim.response_data === 'string'
+          ? JSON.parse(claim.response_data)
+          : claim.response_data;
+      } catch (e) {
+        console.warn('Could not parse claim response_data:', e.message);
+      }
+    }
+
+    // Calculate EOB using real Stedi eligibility data
+    const EOBCalculationService = require('./services/eob-calculation-service');
+    let eobCalculation;
+
+    try {
+      eobCalculation = EOBCalculationService.calculateEOBFromClaim(
+        claim,
+        eligibility || {},
+        claimDetails
+      );
+
+      // If no line items were created but claim has data, ensure totals reflect claim amount
+      if ((!eobCalculation.lineItems || eobCalculation.lineItems.length === 0) && claim.total_amount > 0) {
+        // Create a basic EOB with claim total
+        eobCalculation.totals = eobCalculation.totals || {};
+        eobCalculation.totals.amountBilled = claim.total_amount;
+        eobCalculation.totals.allowedAmount = claimDetails.allowed_amount || claim.total_amount * 0.85;
+        eobCalculation.totals.whatYouOwe = claim.total_amount;
+      }
+    } catch (error) {
+      console.error('Error calculating EOB:', error);
+      // Fallback: create basic EOB structure
+      eobCalculation = {
+        lineItems: [],
+        totals: {
+          amountBilled: claim.total_amount || 0,
+          allowedAmount: claimDetails.allowed_amount || 0,
+          planPaid: 0,
+          copay: eligibility?.copay_amount || 0,
+          coinsurance: 0,
+          deductible: 0,
+          amountNotCovered: 0,
+          whatYouOwe: claim.total_amount || 0
+        }
+      };
+    }
+
+    // Extract diagnosis codes
+    const diagnosisCodes = [];
+    if (claimDetails.coding && claimDetails.coding.icd10) {
+      diagnosisCodes.push(...claimDetails.coding.icd10);
+    } else if (claim.diagnosis_code) {
+      // Parse diagnosis codes from claim
+      claim.diagnosis_code.split(',').forEach(code => {
+        diagnosisCodes.push({
+          code: code.trim(),
+          description: '' // Would need lookup table for descriptions
+        });
+      });
+    }
+
+    // Get payer information
+    if (claim.payer_id) {
+      const payer = db.getPayerByPayerId(claim.payer_id);
+      if (payer) {
+        payerName = payer.payer_name || payerName;
+      }
+    }
+
+    // Get Circle transfer data if exists
+    let circleTransfer = null;
+    if (claim.circle_transfer_id) {
+      circleTransfer = db.getCircleTransferByCircleId(claim.circle_transfer_id);
+    }
+
+    // Build complete EOB response
+    res.json({
+      success: true,
+      claim: {
+        ...claim,
+        patientData,
+        patientName,
+        subscriberId,
+        groupNumber,
+        payerName,
+        planSummary,
+        claimDetails,
+        eligibility: eligibility || {},
+        eob: eobCalculation,
+        diagnosisCodes,
+        circleTransfer
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error fetching claim:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * ============================================
+ * CIRCLE PAYMENT API ENDPOINTS
+ * ============================================
+ */
+
+/**
+ * Create Circle wallet for an entity
+ * POST /api/circle/wallets
+ */
+app.post('/api/circle/wallets', async (req, res) => {
+  try {
+    const { entityType, entityId, description } = req.body;
+
+    if (!entityType || !entityId) {
+      return res.status(400).json({
+        success: false,
+        error: 'entityType and entityId are required'
+      });
+    }
+
+    // Check if wallet already exists
+    const existingAccount = db.getCircleAccountByEntity(entityType, entityId);
+    if (existingAccount) {
+      return res.json({
+        success: true,
+        walletId: existingAccount.circle_wallet_id,
+        account: existingAccount,
+        message: 'Wallet already exists'
+      });
+    }
+
+    // Check if SDK is available
+    if (!CircleService.isAvailable()) {
+      return res.status(500).json({
+        success: false,
+        error: 'Circle SDK not configured. Please set CIRCLE_ENTITY_SECRET in .env file.'
+      });
+    }
+
+    // First, get or create a wallet set
+    // For simplicity, we'll create a default wallet set if it doesn't exist
+    // In production, you'd want to store the wallet set ID in the database
+    let walletSetId = process.env.CIRCLE_WALLET_SET_ID;
+
+    if (!walletSetId) {
+      // Create a default wallet set
+      const walletSetResult = await CircleService.createWalletSet({
+        name: 'Healthcare Billing Wallets',
+        description: 'Default wallet set for healthcare billing'
+      });
+
+      if (!walletSetResult.success) {
+        return res.status(500).json({
+          success: false,
+          error: `Failed to create wallet set: ${walletSetResult.error}`
+        });
+      }
+
+      walletSetId = walletSetResult.walletSetId;
+      // Store wallet set ID for future use
+      process.env.CIRCLE_WALLET_SET_ID = walletSetId;
+      console.log(`✅ Created wallet set: ${walletSetId}`);
+    }
+
+    // Create wallet via Circle SDK
+    const result = await CircleService.createWallet({
+      walletSetId: walletSetId,
+      entityType,
+      entityId,
+      description: description || `${entityType} wallet for ${entityId}`
+    });
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to create wallet'
+      });
+    }
+
+    // Store wallet in database
+    const accountId = `circle-account-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    db.createCircleAccount({
+      id: accountId,
+      entity_type: entityType,
+      entity_id: entityId,
+      circle_wallet_id: result.walletId,
+      currency: 'USDC',
+      status: 'active'
+    });
+
+    console.log(`✅ Circle wallet created: ${result.walletId} for ${entityType}:${entityId}`);
+
+    res.json({
+      success: true,
+      walletId: result.walletId,
+      walletData: result.walletData
+    });
+  } catch (error) {
+    console.error('❌ Error creating Circle wallet:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Get wallet balance
+ * GET /api/circle/wallets/:walletId/balance
+ */
+app.get('/api/circle/wallets/:walletId/balance', async (req, res) => {
+  try {
+    const { walletId } = req.params;
+    const result = await CircleService.getWalletBalance(walletId);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to get wallet balance'
+      });
+    }
+
+    res.json({
+      success: true,
+      walletId: walletId,
+      balances: result.balances
+    });
+  } catch (error) {
+    console.error('❌ Error getting wallet balance:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Get Circle account by entity
+ * GET /api/circle/accounts/:entityType/:entityId
+ */
+app.get('/api/circle/accounts/:entityType/:entityId', async (req, res) => {
+  try {
+    const { entityType, entityId } = req.params;
+    const account = db.getCircleAccountByEntity(entityType, entityId);
+
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        error: 'Circle account not found'
+      });
+    }
+
+    // Get balance from Circle
+    let balance = null;
+    if (account.circle_wallet_id) {
+      const balanceResult = await CircleService.getWalletBalance(account.circle_wallet_id);
+      if (balanceResult.success) {
+        balance = balanceResult.balances;
+      }
+    }
+
+    res.json({
+      success: true,
+      account: {
+        ...account,
+        balance
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error getting Circle account:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Submit claim for payment (Provider submits claim to Insurer)
+ * POST /api/claims/:claimId/submit-payment
+ */
+app.post('/api/claims/:claimId/submit-payment', async (req, res) => {
+  try {
+    const { claimId } = req.params;
+    const claim = db.getClaimById(claimId);
+
+    if (!claim) {
+      return res.status(404).json({
+        success: false,
+        error: 'Claim not found'
+      });
+    }
+
+    // Get Provider wallet (for receiving payment)
+    const providerAccount = db.getCircleAccountByEntity('provider', 'default');
+    if (!providerAccount) {
+      return res.status(404).json({
+        success: false,
+        error: 'Provider Circle wallet not found. Please create a provider wallet first.'
+      });
+    }
+
+    // Get Insurer wallet (for paying)
+    // For now, we'll use payer_id to identify insurer
+    // In production, you'd have a mapping of payer_id to insurer entity_id
+    const insurerAccount = db.getCircleAccountByEntity('insurer', claim.payer_id);
+    if (!insurerAccount) {
+      return res.status(404).json({
+        success: false,
+        error: 'Insurer Circle wallet not found. Please create an insurer wallet first.'
+      });
+    }
+
+    // Update claim status to pending approval
+    db.updateInsuranceClaim(claimId, {
+      status: 'pending_approval',
+      payment_status: 'pending'
+    });
+
+    console.log(`✅ Claim ${claimId} submitted for payment approval`);
+
+    res.json({
+      success: true,
+      claimId: claimId,
+      message: 'Claim submitted for payment approval',
+      providerWallet: providerAccount.circle_wallet_id,
+      insurerWallet: insurerAccount.circle_wallet_id
+    });
+  } catch (error) {
+    console.error('❌ Error submitting claim for payment:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Approve claim and process payment (Insurer approves and pays)
+ * POST /api/claims/:claimId/approve-payment
+ */
+app.post('/api/claims/:claimId/approve-payment', async (req, res) => {
+  try {
+    const { claimId } = req.params;
+    const claim = db.getClaimById(claimId);
+
+    if (!claim) {
+      return res.status(404).json({
+        success: false,
+        error: 'Claim not found'
+      });
+    }
+
+    // Get Provider and Insurer wallets
+    const providerAccount = db.getCircleAccountByEntity('provider', 'default');
+    const insurerAccount = db.getCircleAccountByEntity('insurer', claim.payer_id);
+
+    if (!providerAccount || !insurerAccount) {
+      return res.status(404).json({
+        success: false,
+        error: 'Provider or Insurer wallet not found'
+      });
+    }
+
+    // Calculate payment amount (insurance amount, not total)
+    const paymentAmount = claim.insurance_amount || claim.total_amount;
+
+    // Create Circle transfer
+    const transferResult = await CircleService.createTransfer({
+      fromWalletId: insurerAccount.circle_wallet_id,
+      toWalletId: providerAccount.circle_wallet_id,
+      amount: paymentAmount,
+      currency: 'USDC',
+      claimId: claimId,
+      description: `Payment for claim ${claimId}`
+    });
+
+    if (!transferResult.success) {
+      return res.status(500).json({
+        success: false,
+        error: transferResult.error || 'Failed to create payment transfer'
+      });
+    }
+
+    // Store transfer in database
+    const transferId = `transfer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    db.createCircleTransfer({
+      id: transferId,
+      claim_id: claimId,
+      from_wallet_id: insurerAccount.circle_wallet_id,
+      to_wallet_id: providerAccount.circle_wallet_id,
+      amount: paymentAmount,
+      currency: 'USDC',
+      circle_transfer_id: transferResult.transferId,
+      status: transferResult.status || 'pending'
+    });
+
+    // Update claim with payment information
+    db.updateInsuranceClaim(claimId, {
+      status: 'approved',
+      payment_status: 'processing',
+      payment_amount: paymentAmount,
+      circle_transfer_id: transferResult.transferId,
+      approved_at: new Date().toISOString()
+    });
+
+    console.log(`✅ Claim ${claimId} approved and payment initiated: ${transferResult.transferId}`);
+
+    res.json({
+      success: true,
+      claimId: claimId,
+      transferId: transferResult.transferId,
+      amount: paymentAmount,
+      status: 'processing',
+      message: 'Claim approved and payment initiated'
+    });
+  } catch (error) {
+    console.error('❌ Error approving claim payment:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Circle webhook handler
+ * POST /api/circle/webhook
+ */
+app.post('/api/circle/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const signature = req.headers['circle-signature'];
+    const payload = req.body.toString();
+
+    // Verify webhook signature
+    const isValid = CircleService.verifyWebhookSignature(signature, payload);
+    if (!isValid) {
+      console.warn('⚠️  Invalid webhook signature');
+      return res.status(401).json({ error: 'Invalid signature' });
+    }
+
+    const event = JSON.parse(payload);
+    console.log('🔔 Circle webhook received:', event.type);
+
+    // Handle different webhook event types
+    if (event.type === 'transfer.completed' || event.type === 'transfer.settlement_completed') {
+      const transferId = event.data?.id || event.data?.transferId;
+
+      // Find transfer in database
+      const transfer = db.getCircleTransferByCircleId(transferId);
+      if (transfer) {
+        // Update transfer status
+        db.updateCircleTransfer(transfer.id, {
+          status: 'completed',
+          completed_at: new Date().toISOString()
+        });
+
+        // Update claim status
+        if (transfer.claim_id) {
+          db.updateInsuranceClaim(transfer.claim_id, {
+            status: 'paid',
+            payment_status: 'completed',
+            paid_at: new Date().toISOString()
+          });
+
+          console.log(`✅ Payment completed for claim ${transfer.claim_id}`);
+        }
+      }
+    } else if (event.type === 'transfer.failed') {
+      const transferId = event.data?.id || event.data?.transferId;
+      const transfer = db.getCircleTransferByCircleId(transferId);
+
+      if (transfer) {
+        db.updateCircleTransfer(transfer.id, {
+          status: 'failed',
+          error_message: event.data?.error || 'Transfer failed'
+        });
+
+        if (transfer.claim_id) {
+          db.updateInsuranceClaim(transfer.claim_id, {
+            payment_status: 'failed'
+          });
+        }
+      }
+    }
+
+    res.json({ received: true });
+  } catch (error) {
+    console.error('❌ Error processing Circle webhook:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * Get claims for an appointment
  * GET /api/admin/insurance/claims?appointment_id=xxx
  */
@@ -2250,8 +2923,8 @@ app.get('/api/admin/patients/:id/eob', async (req, res) => {
       let responseData = {};
       try {
         if (claim.response_data) {
-          responseData = typeof claim.response_data === 'string' 
-            ? JSON.parse(claim.response_data) 
+          responseData = typeof claim.response_data === 'string'
+            ? JSON.parse(claim.response_data)
             : claim.response_data;
         }
       } catch (e) {
@@ -2407,7 +3080,9 @@ app.get('/api/admin/patients/:id/eob', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error fetching EOB data:', error);
-    return res.status(500).json({ success: false, error: error.message });
+    console.error('Error stack:', error.stack);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return res.status(500).json({ success: false, error: errorMessage });
   }
 });
 
@@ -3693,6 +4368,13 @@ app.listen(PORT, () => {
   console.log(`   GET    http://localhost:${PORT}/api/admin/ehr/connections ⭐ NEW`);
   console.log(`   GET    http://localhost:${PORT}/api/admin/appointments/:id/ehr-summary ⭐ NEW`);
   console.log(`   GET    http://localhost:${PORT}/api/admin/patients/:id/ehr-summary ⭐ NEW`);
+  console.log('\n💰 Circle Payment Integration:');
+  console.log(`   POST   http://localhost:${PORT}/api/circle/wallets ⭐ NEW`);
+  console.log(`   GET    http://localhost:${PORT}/api/circle/wallets/:walletId/balance ⭐ NEW`);
+  console.log(`   GET    http://localhost:${PORT}/api/circle/accounts/:entityType/:entityId ⭐ NEW`);
+  console.log(`   POST   http://localhost:${PORT}/api/claims/:claimId/submit-payment ⭐ NEW`);
+  console.log(`   POST   http://localhost:${PORT}/api/claims/:claimId/approve-payment ⭐ NEW`);
+  console.log(`   POST   http://localhost:${PORT}/api/circle/webhook ⭐ NEW`);
   console.log('\n🏥 Epic FHIR Direct Integration:');
   console.log(`   GET    http://localhost:${PORT}/api/ehr/epic/connect ⭐ NEW`);
   console.log(`   GET    http://localhost:${PORT}/api/ehr/epic/callback ⭐ NEW`);

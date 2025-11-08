@@ -4,14 +4,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Billing - doclittle- AI Voice Receptionist</title>
+    <title>Billing - Medical Coding Assistant</title>
+    <!-- Redirect to new billing page -->
+    <script>
+        // Redirect to the new billing page (billing.html)
+        // Preserve query parameters if any
+        const queryString = window.location.search;
+        window.location.replace(`billing.html${queryString}`);
+    </script>
     <link rel="stylesheet" href="../assets/css/global.css">
     <script src="../assets/js/config.js"></script>
     <style>
         :root {
-            --primary: #0891b2;
-            --primary-dark: #0e7490;
-            --primary-light: #06b6d4;
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --primary-light: #3b82f6;
         }
 
 
@@ -636,7 +643,7 @@
                     <span class="doc">Doc</span><span class="little">Little</span><span
                         style="font-weight:700;">.</span>
                 </div>
-                <div class="sidebar-subtitle">AI Voice Receptionist</div>
+                <div class="sidebar-subtitle">Medical Coding Assistant</div>
             </div>
 
             <nav class="sidebar-nav">
@@ -801,7 +808,7 @@
     <script>
         const API_BASE = window.API_BASE || 'http://localhost:4000';
         function getPatientId() { try { return new URLSearchParams(window.location.search).get('patientId'); } catch (_) { return null; } }
-        function fmtMoney(v){ return (v!=null) ? `$${Number(v).toFixed(2)}` : '—'; }
+        function fmtMoney(v) { return (v != null) ? `$${Number(v).toFixed(2)}` : '—'; }
 
         async function loadCoverage() {
             const pid = getPatientId();
@@ -809,11 +816,11 @@
             document.getElementById('coverageSummaryCard').style.display = 'block';
             try {
                 const [insRes, eligRes] = await Promise.all([
-                    fetch(`${API_BASE}/api/admin/patients/${encodeURIComponent(pid)}/insurance`).then(r=>r.json()),
-                    fetch(`${API_BASE}/api/admin/patients/${encodeURIComponent(pid)}/eligibility`).then(r=>r.json())
+                    fetch(`${API_BASE}/api/admin/patients/${encodeURIComponent(pid)}/insurance`).then(r => r.json()),
+                    fetch(`${API_BASE}/api/admin/patients/${encodeURIComponent(pid)}/eligibility`).then(r => r.json())
                 ]);
                 if (insRes.success && Array.isArray(insRes.insurance) && insRes.insurance.length) {
-                    const primary = insRes.insurance.find(i=>i.is_primary) || insRes.insurance[0];
+                    const primary = insRes.insurance.find(i => i.is_primary) || insRes.insurance[0];
                     document.getElementById('covProvider').textContent = primary.payer_name || primary.payer_id || '—';
                 }
                 if (eligRes.success && Array.isArray(eligRes.eligibility) && eligRes.eligibility.length) {
@@ -833,7 +840,7 @@
         let billingRows = [];
 
         if (sessionStorage.getItem('authenticated') !== 'true') {
-            window.location.href = '../index.html';
+            window.location.href = '../login.html';
         }
 
         userData = JSON.parse(sessionStorage.getItem('user'));
@@ -987,7 +994,7 @@
 
         function logout() {
             sessionStorage.clear();
-            window.location.href = '../index.html';
+            window.location.href = '../login.html';
         }
 
         // Record Modal Functions
@@ -996,35 +1003,35 @@
                 alert('Patient ID not available');
                 return;
             }
-            
+
             const modal = document.getElementById('recordModal');
             const body = document.getElementById('recordModalBody');
             modal.classList.add('active');
             body.innerHTML = '<div style="text-align:center;padding:40px;">Loading...</div>';
-            
+
             try {
                 // Fetch patient data
                 const [patientRes, insRes, eligRes, apptRes] = await Promise.all([
                     fetch(`${API_BASE}/fhir/Patient/${encodeURIComponent(patientId)}`).then(r => r.ok ? r.json() : null).catch(() => null),
-                    fetch(`${API_BASE}/api/admin/patients/${encodeURIComponent(patientId)}/insurance`).then(r => r.json()).catch(() => ({success: false})),
-                    fetch(`${API_BASE}/api/admin/patients/${encodeURIComponent(patientId)}/eligibility`).then(r => r.json()).catch(() => ({success: false})),
+                    fetch(`${API_BASE}/api/admin/patients/${encodeURIComponent(patientId)}/insurance`).then(r => r.json()).catch(() => ({ success: false })),
+                    fetch(`${API_BASE}/api/admin/patients/${encodeURIComponent(patientId)}/eligibility`).then(r => r.json()).catch(() => ({ success: false })),
                     fetch(`${API_BASE}/voice/appointments/search`, {
                         method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ args: { patient_id: patientId } })
-                    }).then(r => r.json()).catch(() => ({success: false}))
+                    }).then(r => r.json()).catch(() => ({ success: false }))
                 ]);
-                
+
                 // Extract patient info
                 const patient = patientRes || {};
                 const nameObj = (patient.name && patient.name[0]) || {};
-                const fullName = `${(nameObj.given||[''])[0]} ${nameObj.family||''}`.trim() || 'Unknown';
+                const fullName = `${(nameObj.given || [''])[0]} ${nameObj.family || ''}`.trim() || 'Unknown';
                 const telecom = patient.telecom || [];
-                const phone = (telecom.find(t => t.system==='phone')||{}).value || '—';
-                const email = (telecom.find(t => t.system==='email')||{}).value || '—';
+                const phone = (telecom.find(t => t.system === 'phone') || {}).value || '—';
+                const email = (telecom.find(t => t.system === 'email') || {}).value || '—';
                 const addr = (patient.address && patient.address[0]) || {};
                 const addrStr = [addr.line && addr.line[0], addr.city, addr.state, addr.postalCode].filter(Boolean).join(', ') || '—';
-                
+
                 // Extract insurance info
                 let insProvider = '—', insMember = '—', insEligible = '—', insCopay = '—', insDeductible = '—', insCoinsurance = '—', insPlan = '—';
                 if (insRes.success && Array.isArray(insRes.insurance) && insRes.insurance.length) {
@@ -1042,13 +1049,13 @@
                     insCoinsurance = (e.coinsurance_percent != null) ? `${e.coinsurance_percent}%` : '—';
                     insPlan = e.plan_summary || '—';
                 }
-                
+
                 // Extract appointments
                 const appts = (apptRes.success && apptRes.appointments) ? apptRes.appointments : [];
-                const apptList = appts.length > 0 
+                const apptList = appts.length > 0
                     ? appts.map(a => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-200);"><div>${a.appointment_type || 'Consultation'} — <span style="padding:2px 8px;background:var(--gray-100);border-radius:12px;font-size:12px;">${a.status}</span></div><div>${a.datetime_display || ''}</div></div>`).join('')
                     : '<div style="padding:16px;text-align:center;color:var(--gray-500);">No appointments yet.</div>';
-                
+
                 // Render modal content
                 body.innerHTML = `
                     <div class="record-grid">
@@ -1092,11 +1099,11 @@
                 body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--danger);">Failed to load record. Please try again.</div>';
             }
         }
-        
+
         function closeRecordModal() {
             document.getElementById('recordModal').classList.remove('active');
         }
-        
+
         // Close modal on Escape key
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {

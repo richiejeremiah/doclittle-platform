@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoices - Medical Coding Assistant</title>
+    <link rel="stylesheet" href="../assets/css/global.css">
+    <script src="../assets/js/config.js"></script>
+    <style>
+        :root {
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --primary-light: #3b82f6;
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .sidebar-logo {
+            font-size: 32px;
+            line-height: 1;
+            letter-spacing: -3px;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-logo .doc {
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+        }
+
+        .sidebar-logo .little {
+            font-family: 'Verdana', Geneva, sans-serif;
+            font-weight: 700;
+        }
+
+        .sidebar-subtitle {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-top: 4px;
+        }
+
+        .sidebar-nav {
+            padding: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--gray-700);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+            text-decoration: none;
+        }
+
+        .nav-item:hover {
+            background: var(--gray-50);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--gray-200);
+            position: absolute;
+            bottom: 0;
+            width: 260px;
+            background: white;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            background: var(--gray-50);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: var(--gray-200);
+        }
+
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            padding: 32px;
+            background: var(--gray-50);
+        }
+
+        .page-header {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .page-title {
+            font-size: 28px;
+            margin-bottom: 8px;
+            color: var(--gray-900);
+        }
+
+        .page-subtitle {
+            color: var(--gray-600);
+            font-size: 14px;
+        }
+
+        .invoices-list {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .invoices-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .invoices-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .invoices-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .invoices-table th {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 2px solid var(--gray-200);
+            color: var(--gray-700);
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .invoices-table td {
+            padding: 16px 12px;
+            border-bottom: 1px solid var(--gray-200);
+            color: var(--gray-900);
+        }
+
+        .invoices-table tr:hover {
+            background: var(--gray-50);
+        }
+
+        .invoice-number {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .invoice-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-paid {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-overdue {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-draft {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+
+        .invoice-amount {
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .invoice-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            border: 1px solid var(--gray-300);
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .btn-small:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-400);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px;
+            color: var(--gray-600);
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <span class="doc">Doc</span><span class="little">Little</span><span style="font-weight:700;">.</span>
+                </div>
+                <div class="sidebar-subtitle">Medical Coding Assistant</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="pdf-coding.html" class="nav-item">
+                    <span class="nav-icon">📄</span>
+                    <span>Scan</span>
+                </a>
+                <a href="invoices.html" class="nav-item active">
+                    <span class="nav-icon">🧾</span>
+                    <span>Invoices</span>
+                </a>
+                <a href="patients.html" class="nav-item">
+                    <span class="nav-icon">👥</span>
+                    <span>Patients</span>
+                </a>
+                <a href="billing.html" class="nav-item">
+                    <span class="nav-icon">💳</span>
+                    <span>Billing</span>
+                </a>
+                <a href="wallets.html" class="nav-item">
+                    <span class="nav-icon">💰</span>
+                    <span>Wallets</span>
+                </a>
+                <a href="calendar.html" class="nav-item">
+                    <span class="nav-icon">📅</span>
+                    <span>Calendar</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">HP</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">Healthcare Provider</div>
+                        <div class="user-role" id="userRole">Provider</div>
+                    </div>
+                    <button class="logout-btn" onclick="logout()" title="Logout">
+                        🚪
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Invoices</h1>
+                <p class="page-subtitle">Manage and track all invoices</p>
+            </div>
+
+            <div class="invoices-list">
+                <div class="invoices-header">
+                    <h2 class="invoices-title">All Invoices</h2>
+                    <button class="btn-primary" onclick="createInvoice()">+ New Invoice</button>
+                </div>
+
+                <table class="invoices-table">
+                    <thead>
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Client</th>
+                            <th>Date</th>
+                            <th>Due Date</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoicesTableBody">
+                        <tr>
+                            <td colspan="7">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">🧾</div>
+                                    <p>No invoices found. Create your first invoice to get started.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Check authentication
+        if (sessionStorage.getItem('authenticated') !== 'true') {
+            window.location.href = '../login.html';
+        }
+
+        // Load user info
+        const userName = sessionStorage.getItem('userName') || 'Healthcare Provider';
+        const userRole = sessionStorage.getItem('userRole') || 'Provider';
+        document.getElementById('userName').textContent = userName;
+        document.getElementById('userRole').textContent = userRole;
+
+        // Logout function
+        function logout() {
+            sessionStorage.removeItem('authenticated');
+            sessionStorage.removeItem('userName');
+            sessionStorage.removeItem('userRole');
+            window.location.href = '../login.html';
+        }
+
+        // Load invoices
+        async function loadInvoices() {
+            try {
+                // TODO: Replace with actual API call
+                // const response = await fetch('/api/invoices');
+                // const invoices = await response.json();
+                
+                // For now, show empty state
+                // This will be replaced with actual data loading
+                console.log('Loading invoices...');
+            } catch (error) {
+                console.error('Error loading invoices:', error);
+            }
+        }
+
+        // Create new invoice
+        function createInvoice() {
+            // TODO: Implement invoice creation
+            alert('Invoice creation feature coming soon!');
+        }
+
+        // Initialize
+        loadInvoices();
+    </script>
+</body>
+
+</html>
+

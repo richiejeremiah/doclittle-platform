@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claim Details - Medical Coding Assistant</title>
+    <link rel="stylesheet" href="../assets/css/global.css">
+    <script src="../assets/js/config.js"></script>
+    <style>
+        :root {
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --primary-light: #3b82f6;
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .sidebar-logo {
+            font-size: 32px;
+            line-height: 1;
+            letter-spacing: -3px;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-logo .doc {
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+        }
+
+        .sidebar-logo .little {
+            font-family: 'Verdana', Geneva, sans-serif;
+            font-weight: 700;
+        }
+
+        .sidebar-subtitle {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-top: 4px;
+        }
+
+        .sidebar-nav {
+            padding: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--gray-700);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+            text-decoration: none;
+        }
+
+        .nav-item:hover {
+            background: var(--gray-50);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--gray-200);
+            position: absolute;
+            bottom: 0;
+            width: 260px;
+            background: white;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            background: var(--gray-50);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: var(--gray-200);
+        }
+
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            padding: 32px;
+            background: var(--gray-50);
+        }
+
+        .back-btn {
+            background: white;
+            border: 1px solid var(--gray-300);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-bottom: 24px;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-400);
+        }
+
+        .eob-container {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .eob-header {
+            border-bottom: 2px solid var(--gray-200);
+            padding-bottom: 24px;
+            margin-bottom: 24px;
+        }
+
+        .eob-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+
+        .eob-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin: 0;
+        }
+
+        .eob-notice {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #856404;
+            font-weight: 600;
+            margin-top: 16px;
+        }
+
+        .eob-subscriber-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .eob-info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .eob-info-label {
+            font-size: 12px;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .eob-info-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .eob-summary {
+            background: var(--gray-50);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .eob-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+        }
+
+        .eob-summary-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .eob-summary-label {
+            font-size: 12px;
+            color: var(--gray-600);
+            text-transform: uppercase;
+        }
+
+        .eob-summary-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .eob-table-wrapper {
+            overflow-x: auto;
+            margin-bottom: 24px;
+        }
+
+        .eob-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .eob-table th {
+            background: var(--gray-50);
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--gray-700);
+            border: 1px solid var(--gray-200);
+            font-size: 12px;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .eob-table td {
+            padding: 12px 8px;
+            border: 1px solid var(--gray-200);
+            color: var(--gray-700);
+            font-size: 14px;
+        }
+
+        .eob-table tbody tr:hover {
+            background: var(--gray-50);
+        }
+
+        .eob-table .total-row {
+            background: var(--gray-100);
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .eob-table .total-row td {
+            border-top: 2px solid var(--gray-300);
+            font-size: 16px;
+            padding: 16px 8px;
+        }
+
+        .eob-table .total-row td strong {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-draft {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+
+        .status-submitted {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-denied {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-processing {
+            background: #cfe2ff;
+            color: #084298;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px;
+            color: var(--gray-600);
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <span class="doc">Doc</span><span class="little">Little</span><span
+                        style="font-weight:700;">.</span>
+                </div>
+                <div class="sidebar-subtitle">Medical Coding Assistant</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="pdf-coding.html" class="nav-item">
+                    <span class="nav-icon">📄</span>
+                    <span>Scan</span>
+                </a>
+                <a href="invoices.html" class="nav-item">
+                    <span class="nav-icon">🧾</span>
+                    <span>Invoices</span>
+                </a>
+                <a href="patients.html" class="nav-item">
+                    <span class="nav-icon">👥</span>
+                    <span>Patients</span>
+                </a>
+                <a href="billing.html" class="nav-item">
+                    <span class="nav-icon">💳</span>
+                    <span>Billing</span>
+                </a>
+                <a href="wallets.html" class="nav-item">
+                    <span class="nav-icon">💰</span>
+                    <span>Wallets</span>
+                </a>
+                <a href="calendar.html" class="nav-item">
+                    <span class="nav-icon">📅</span>
+                    <span>Calendar</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">HP</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">Healthcare Provider</div>
+                        <div class="user-role" id="userRole">Provider</div>
+                    </div>
+                    <button class="logout-btn" onclick="logout()" title="Logout">
+                        🚪
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <button class="back-btn" onclick="window.location.href='billing.html'">← Back to Billing</button>
+
+            <div class="eob-container" id="eobContainer">
+                <div class="empty-state">
+                    <div class="empty-state-icon">⏳</div>
+                    <p>Loading claim details...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = window.API_BASE || 'http://localhost:4000';
+
+        if (sessionStorage.getItem('authenticated') !== 'true') {
+            window.location.href = '../login.html';
+        }
+
+        // Load user info
+        const userName = sessionStorage.getItem('userName') || 'Healthcare Provider';
+        const userRole = sessionStorage.getItem('userRole') || 'Provider';
+        document.getElementById('userName').textContent = userName;
+        document.getElementById('userRole').textContent = userRole;
+
+        // Logout function
+        function logout() {
+            sessionStorage.removeItem('authenticated');
+            sessionStorage.removeItem('userName');
+            sessionStorage.removeItem('userRole');
+            window.location.href = '../login.html';
+        }
+
+        // Get claim ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const claimId = urlParams.get('id');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (claimId) {
+                loadClaim(claimId);
+            } else {
+                showError('No claim ID provided');
+            }
+        });
+
+        async function loadClaim(claimId) {
+            try {
+                console.log(`Loading claim: ${claimId}`);
+                const response = await fetch(`${API_BASE}/api/claims/${claimId}`);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API Error:', errorText);
+                    throw new Error(`Failed to load claim: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('Claim data received:', data);
+
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to load claim');
+                }
+
+                if (!data.claim) {
+                    throw new Error('Claim data is missing');
+                }
+
+                displayClaim(data.claim);
+            } catch (error) {
+                console.error('Error loading claim:', error);
+                showError(error.message || 'Failed to load claim. Please check the console for details.');
+            }
+        }
+
+        function displayClaim(claim) {
+            console.log('Displaying claim:', claim);
+            const container = document.getElementById('eobContainer');
+
+            // Use patient name from claim (set by backend)
+            const patientName = claim.patientName || 'Unknown Patient';
+            const subscriberId = claim.subscriberId || claim.member_id || 'N/A';
+            const planSummary = claim.planSummary || claim.eligibility?.plan_summary || 'N/A';
+
+            // Use REAL EOB data from backend (calculated from Stedi eligibility data)
+            const eob = claim.eob || {};
+            const eobTotals = eob.totals || {};
+            const eobLineItems = eob.lineItems || [];
+            const eligibility = claim.eligibility || {};
+
+            // Extract diagnosis codes
+            const diagnosisCodes = claim.diagnosisCodes || [];
+
+            // Debug logging
+            console.log('EOB data:', {
+                totals: eobTotals,
+                lineItems: eobLineItems,
+                eligibility: eligibility,
+                claimTotal: claim.total_amount
+            });
+
+            // Format date
+            const claimDate = claim.submitted_at
+                ? new Date(claim.submitted_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                })
+                : new Date().toLocaleDateString();
+
+            // Status badge
+            const statusClass = `status-${claim.status || 'draft'}`;
+            const statusText = (claim.status || 'draft').charAt(0).toUpperCase() +
+                (claim.status || 'draft').slice(1);
+
+            // Payment status
+            const paymentStatus = claim.payment_status || 'pending';
+            const paymentStatusClass = `status-${paymentStatus}`;
+            const paymentStatusText = paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1);
+
+            // Payment action buttons (only show for appropriate statuses)
+            let paymentActions = '';
+            if (claim.status === 'draft' || claim.status === 'submitted') {
+                paymentActions = `
+                    <button onclick="submitClaimForPayment('${claim.id}')" 
+                        style="padding: 10px 20px; background: #1e40af; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-left: 12px;">
+                        Submit for Payment
+                    </button>
+                `;
+            } else if (claim.status === 'pending_approval') {
+                paymentActions = `
+                    <button onclick="approveClaimPayment('${claim.id}')" 
+                        style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-left: 12px;">
+                        Approve & Pay
+                    </button>
+                `;
+            }
+
+            container.innerHTML = `
+                <div class="eob-header">
+                    <div class="eob-header-top">
+                        <div>
+                            <h1 class="eob-title">Explanation of Benefits</h1>
+                            <div style="margin-top: 8px; color: var(--gray-600);">
+                                Claim #: ${claim.id || 'N/A'} | Date: ${claimDate}
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div>
+                                <div style="font-size: 11px; color: var(--gray-600); margin-bottom: 4px;">Claim Status</div>
+                                <span class="status-badge ${statusClass}">${statusText}</span>
+                            </div>
+                            <div>
+                                <div style="font-size: 11px; color: var(--gray-600); margin-bottom: 4px;">Payment Status</div>
+                                <span class="status-badge ${paymentStatusClass}">${paymentStatusText}</span>
+                            </div>
+                            ${paymentActions}
+                        </div>
+                    </div>
+                    <div class="eob-notice">THIS IS NOT A BILL</div>
+                    <div class="eob-subscriber-info">
+                        <div class="eob-info-item">
+                            <div class="eob-info-label">Subscriber Name</div>
+                            <div class="eob-info-value">${patientName}</div>
+                        </div>
+                        <div class="eob-info-item">
+                            <div class="eob-info-label">Subscriber ID</div>
+                            <div class="eob-info-value">${subscriberId}</div>
+                        </div>
+                        <div class="eob-info-item">
+                            <div class="eob-info-label">Group Number</div>
+                            <div class="eob-info-value">${claim.groupNumber || eligibility.group_number || 'N/A'}</div>
+                        </div>
+                        <div class="eob-info-item">
+                            <div class="eob-info-label">Plan</div>
+                            <div class="eob-info-value">${planSummary}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="eob-summary">
+                    <div class="eob-summary-grid">
+                        <div class="eob-summary-item">
+                            <div class="eob-summary-label">Amount Billed</div>
+                            <div class="eob-summary-value">$${(eobTotals.amountBilled || claim.total_amount || 0).toFixed(2)}</div>
+                        </div>
+                        <div class="eob-summary-item">
+                            <div class="eob-summary-label">Your Plan Paid</div>
+                            <div class="eob-summary-value">$${(eobTotals.planPaid || 0).toFixed(2)}</div>
+                        </div>
+                        <div class="eob-summary-item">
+                            <div class="eob-summary-label">What You Owe</div>
+                            <div class="eob-summary-value" style="color: var(--primary);">$${(eobTotals.whatYouOwe || claim.total_amount || 0).toFixed(2)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="eob-table-wrapper">
+                    <table class="eob-table">
+                        <thead>
+                            <tr>
+                                <th>A<br>Date of Service<br>Type of Service</th>
+                                <th>B<br>Amount Billed</th>
+                                <th>C<br>Allowed Amount</th>
+                                <th>D<br>Your Plan Paid</th>
+                                <th>E<br>Your Other Insurance Paid</th>
+                                <th>F<br>Copay</th>
+                                <th>G<br>Coinsurance</th>
+                                <th>H<br>Deductible</th>
+                                <th>I<br>Amount Not Covered</th>
+                                <th>J<br>What You Owe</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${eobLineItems.length > 0 ? eobLineItems.map((item) => `
+                                    <tr>
+                                        <td>
+                                            <div><strong>${item.dateOfService || claimDate}</strong></div>
+                                            <div style="font-size: 11px; color: var(--gray-600); margin-top: 4px;">
+                                                ${item.typeOfService || item.cptCode || 'Service'}<br>
+                                                ${item.cptCode && item.cptCode !== 'N/A' ? `CPT: ${item.cptCode}` : ''}
+                                            </div>
+                                        </td>
+                                        <td>$${(item.amountBilled || 0).toFixed(2)}</td>
+                                        <td>$${(item.allowedAmount || item.amountBilled || 0).toFixed(2)}</td>
+                                        <td>$${(item.planPaid || 0).toFixed(2)}</td>
+                                        <td>$${(item.otherInsurancePaid || 0).toFixed(2)}</td>
+                                        <td>$${(item.copay || 0).toFixed(2)}</td>
+                                        <td>$${(item.coinsurance || 0).toFixed(2)}</td>
+                                        <td>$${(item.deductible || 0).toFixed(2)}</td>
+                                        <td>$${(item.amountNotCovered || 0).toFixed(2)}</td>
+                                        <td><strong>$${(item.whatYouOwe || 0).toFixed(2)}</strong></td>
+                                    </tr>
+                                `).join('') : `
+                                    <tr>
+                                        <td colspan="10" style="text-align: center; padding: 24px; color: var(--gray-500);">
+                                            <div style="margin-bottom: 8px;">⚠️ No service line items found.</div>
+                                            <div style="font-size: 12px;">This claim may need to be processed or created from a PDF scan.</div>
+                                            ${claim.total_amount > 0 ? `
+                                                <div style="margin-top: 12px; padding: 12px; background: #f0f9ff; border-radius: 6px; font-size: 13px;">
+                                                    <strong>Total Amount:</strong> $${claim.total_amount.toFixed(2)}<br>
+                                                    ${claim.service_code && claim.service_code !== 'N/A' ? `<strong>Service Code:</strong> ${claim.service_code}` : ''}
+                                                </div>
+                                            ` : ''}
+                                        </td>
+                                    </tr>
+                                `}
+                            <tr class="total-row">
+                                <td><strong>Total</strong></td>
+                                <td><strong>$${(eobTotals.amountBilled || claim.total_amount || 0).toFixed(2)}</strong></td>
+                                <td><strong>$${(eobTotals.allowedAmount || (claim.total_amount ? claim.total_amount * 0.85 : 0) || 0).toFixed(2)}</strong></td>
+                                <td><strong>$${(eobTotals.planPaid || 0).toFixed(2)}</strong></td>
+                                <td><strong>$${(eobTotals.otherInsurancePaid || 0).toFixed(2)}</strong></td>
+                                <td><strong>$${(eobTotals.copay || eligibility.copay_amount || 0).toFixed(2)}</strong></td>
+                                <td><strong>$${(eobTotals.coinsurance || 0).toFixed(2)}</strong></td>
+                                <td><strong>$${(eobTotals.deductible || 0).toFixed(2)}</strong></td>
+                                <td><strong>$${(eobTotals.amountNotCovered || 0).toFixed(2)}</strong></td>
+                                <td><strong>$${(eobTotals.whatYouOwe || claim.total_amount || 0).toFixed(2)}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                ${diagnosisCodes.length > 0 ? `
+                    <div style="margin-top: 24px; padding: 16px; background: var(--gray-50); border-radius: 8px;">
+                        <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--gray-900);">
+                            Diagnosis Codes (ICD-10)
+                        </h3>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            ${diagnosisCodes.map(icd => `
+                                <div style="padding: 6px 12px; background: white; border-radius: 6px; border: 1px solid var(--gray-200);">
+                                    <strong>${icd.code || icd}</strong>: ${icd.description || 'No description'}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        function showError(message) {
+            const container = document.getElementById('eobContainer');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">❌</div>
+                    <p>${message}</p>
+                    <button class="back-btn" onclick="window.location.href='billing.html'" style="margin-top: 16px;">
+                        Back to Billing
+                    </button>
+                </div>
+            `;
+        }
+
+        // Submit claim for payment (Provider action)
+        async function submitClaimForPayment(claimId) {
+            if (!confirm('Submit this claim for payment approval?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/claims/${claimId}/submit-payment`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert('Claim submitted for payment approval!');
+                    // Reload claim to show updated status
+                    loadClaim(claimId);
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to submit claim'));
+                }
+            } catch (error) {
+                console.error('Error submitting claim for payment:', error);
+                alert('Error submitting claim: ' + error.message);
+            }
+        }
+
+        // Approve claim and process payment (Insurer action)
+        async function approveClaimPayment(claimId) {
+            if (!confirm('Approve this claim and process payment?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/claims/${claimId}/approve-payment`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert(`Claim approved! Payment of $${result.amount.toFixed(2)} is being processed.`);
+                    // Reload claim to show updated status
+                    loadClaim(claimId);
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to approve claim'));
+                }
+            } catch (error) {
+                console.error('Error approving claim payment:', error);
+                alert('Error approving claim: ' + error.message);
+            }
+        }
+    </script>
+</body>
+
+</html>

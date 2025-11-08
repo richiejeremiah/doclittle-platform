@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circle Wallets - Medical Coding Assistant</title>
+    <link rel="stylesheet" href="../assets/css/global.css">
+    <script src="../assets/js/config.js"></script>
+    <style>
+        :root {
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --primary-light: #3b82f6;
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .sidebar-logo {
+            font-size: 32px;
+            line-height: 1;
+            letter-spacing: -3px;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-logo .doc {
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+        }
+
+        .sidebar-logo .little {
+            font-family: 'Verdana', Geneva, sans-serif;
+            font-weight: 700;
+        }
+
+        .sidebar-subtitle {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-top: 4px;
+        }
+
+        .sidebar-nav {
+            padding: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--gray-700);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+            text-decoration: none;
+        }
+
+        .nav-item:hover {
+            background: var(--gray-50);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--gray-200);
+            position: absolute;
+            bottom: 0;
+            width: 260px;
+            background: white;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            padding: 32px;
+            flex: 1;
+            background: #f7fafc;
+        }
+
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            font-size: 16px;
+            color: var(--gray-600);
+        }
+
+        .wallets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .wallet-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .wallet-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .wallet-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .wallet-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .wallet-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .wallet-badge.active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .wallet-badge.inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .wallet-balance {
+            margin: 20px 0;
+        }
+
+        .balance-label {
+            font-size: 12px;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .balance-amount {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .wallet-info {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .wallet-info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .wallet-info-label {
+            color: var(--gray-600);
+        }
+
+        .wallet-info-value {
+            color: var(--gray-900);
+            font-weight: 600;
+            font-family: monospace;
+            word-break: break-all;
+        }
+
+        .wallet-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-300);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 48px;
+            color: var(--gray-600);
+        }
+
+        .error-message {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+
+        .success-message {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .refresh-btn {
+            position: absolute;
+            top: 32px;
+            right: 32px;
+            padding: 10px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <span class="doc">Doc</span><span class="little">Little</span>.
+                </div>
+                <div class="sidebar-subtitle">Medical Coding Assistant</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="pdf-coding.html" class="nav-item">
+                    <span class="nav-icon">📄</span>
+                    <span>Scan</span>
+                </a>
+                <a href="invoices.html" class="nav-item">
+                    <span class="nav-icon">🧾</span>
+                    <span>Invoices</span>
+                </a>
+                <a href="patients.html" class="nav-item">
+                    <span class="nav-icon">👥</span>
+                    <span>Patients</span>
+                </a>
+                <a href="billing.html" class="nav-item">
+                    <span class="nav-icon">💳</span>
+                    <span>Billing</span>
+                </a>
+                <a href="wallets.html" class="nav-item active">
+                    <span class="nav-icon">💰</span>
+                    <span>Wallets</span>
+                </a>
+                <a href="calendar.html" class="nav-item">
+                    <span class="nav-icon">📅</span>
+                    <span>Calendar</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">HP</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">Healthcare Provider</div>
+                        <div class="user-role" id="userRole">Provider</div>
+                    </div>
+                    <button class="logout-btn" onclick="logout()" title="Logout">🚪</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <button class="refresh-btn" onclick="loadWallets()">🔄 Refresh</button>
+
+            <div class="page-header">
+                <h1 class="page-title">Circle Wallets</h1>
+                <p class="page-subtitle">View and manage USDC wallets for Provider, Insurer, and Patient accounts</p>
+            </div>
+
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+            <div id="successMessage" class="success-message" style="display: none;"></div>
+
+            <div id="walletsContainer" class="wallets-grid">
+                <div class="loading">Loading wallets...</div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = window.API_BASE || 'http://localhost:4000';
+
+        if (sessionStorage.getItem('authenticated') !== 'true') {
+            window.location.href = '../login.html';
+        }
+
+        // Load user info
+        const userData = JSON.parse(sessionStorage.getItem('user') || '{}');
+        if (userData.name) {
+            document.getElementById('userName').textContent = userData.name;
+            const initials = userData.name.split(' ').map(n => n[0]).join('').substring(0, 2);
+            document.getElementById('userAvatar').textContent = initials;
+        }
+        if (userData.role) {
+            document.getElementById('userRole').textContent = userData.role;
+        }
+
+        // Test accounts configuration - match the 3 test accounts from login
+        const TEST_ACCOUNTS = [
+            { entityType: 'provider', entityId: 'default', name: 'Healthcare Provider', icon: '👨‍⚕️', email: 'provider@doclittle.com' },
+            { entityType: 'insurer', entityId: 'TEST_INSURER_001', name: 'Insurer Admin', icon: '🏥', email: 'insurer@doclittle.com' },
+            { entityType: 'patient', entityId: 'default', name: 'Patient Wallet', icon: '👤', email: 'patient@doclittle.com' }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadWallets();
+        });
+
+        async function loadWallets() {
+            const container = document.getElementById('walletsContainer');
+            container.innerHTML = '<div class="loading">Loading wallets...</div>';
+
+            try {
+                const wallets = await Promise.all(
+                    TEST_ACCOUNTS.map(async (account) => {
+                        try {
+                            // Try to get existing wallet
+                            const response = await fetch(
+                                `${API_BASE}/api/circle/accounts/${account.entityType}/${account.entityId}`
+                            );
+
+                            if (response.ok) {
+                                const data = await response.json();
+                                if (data.success) {
+                                    return {
+                                        ...account,
+                                        walletId: data.account.circle_wallet_id,
+                                        balance: data.account.balance || [],
+                                        status: data.account.status || 'active',
+                                        exists: true
+                                    };
+                                }
+                            }
+
+                            // Wallet doesn't exist, return placeholder
+                            return {
+                                ...account,
+                                walletId: null,
+                                balance: [],
+                                status: 'inactive',
+                                exists: false
+                            };
+                        } catch (error) {
+                            console.error(`Error loading wallet for ${account.entityType}:${account.entityId}:`, error);
+                            return {
+                                ...account,
+                                walletId: null,
+                                balance: [],
+                                status: 'inactive',
+                                exists: false,
+                                error: error.message
+                            };
+                        }
+                    })
+                );
+
+                displayWallets(wallets);
+            } catch (error) {
+                console.error('Error loading wallets:', error);
+                container.innerHTML = `
+                    <div class="error-message">
+                        Failed to load wallets: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function displayWallets(wallets) {
+            const container = document.getElementById('walletsContainer');
+
+            if (wallets.length === 0) {
+                container.innerHTML = '<div class="loading">No wallets found</div>';
+                return;
+            }
+
+            container.innerHTML = wallets.map(wallet => {
+                // Calculate USDC balance - handle different response formats
+                let balanceAmount = 0;
+                if (wallet.balance) {
+                    if (Array.isArray(wallet.balance)) {
+                        // Array format: [{ token: { symbol: 'USDC' }, amount: '100.00' }]
+                        const usdcBalance = wallet.balance.find(b => 
+                            (b.token && b.token.symbol === 'USDC') || 
+                            (b.symbol === 'USDC') ||
+                            (b.currency === 'USDC')
+                        );
+                        if (usdcBalance) {
+                            balanceAmount = parseFloat(usdcBalance.amount || usdcBalance.balance || 0);
+                        }
+                    } else if (wallet.balance.tokenBalances && Array.isArray(wallet.balance.tokenBalances)) {
+                        // Object format: { tokenBalances: [...] }
+                        const usdcBalance = wallet.balance.tokenBalances.find(b => 
+                            (b.token && b.token.symbol === 'USDC') || 
+                            (b.symbol === 'USDC')
+                        );
+                        if (usdcBalance) {
+                            balanceAmount = parseFloat(usdcBalance.amount || usdcBalance.balance || 0);
+                        }
+                    }
+                }
+
+                return `
+                    <div class="wallet-card">
+                        <div class="wallet-header">
+                            <div class="wallet-title">${wallet.icon} ${wallet.name}</div>
+                            <span class="wallet-badge ${wallet.exists ? 'active' : 'inactive'}">
+                                ${wallet.exists ? 'Active' : 'Not Created'}
+                            </span>
+                        </div>
+
+                        ${wallet.exists ? `
+                            <div class="wallet-balance">
+                                <div class="balance-label">USDC Balance</div>
+                                <div class="balance-amount">$${balanceAmount.toFixed(2)}</div>
+                            </div>
+
+                            <div class="wallet-info">
+                                <div class="wallet-info-item">
+                                    <span class="wallet-info-label">Wallet ID:</span>
+                                    <span class="wallet-info-value">${wallet.walletId ? wallet.walletId.substring(0, 20) + '...' : 'N/A'}</span>
+                                </div>
+                                <div class="wallet-info-item">
+                                    <span class="wallet-info-label">Entity Type:</span>
+                                    <span class="wallet-info-value">${wallet.entityType}</span>
+                                </div>
+                                <div class="wallet-info-item">
+                                    <span class="wallet-info-label">Entity ID:</span>
+                                    <span class="wallet-info-value">${wallet.entityId}</span>
+                                </div>
+                                <div class="wallet-info-item">
+                                    <span class="wallet-info-label">Status:</span>
+                                    <span class="wallet-info-value">${wallet.status}</span>
+                                </div>
+                            </div>
+
+                            <div class="wallet-actions">
+                                <button class="btn btn-secondary" onclick="refreshBalance('${wallet.entityType}', '${wallet.entityId}')">
+                                    🔄 Refresh Balance
+                                </button>
+                            </div>
+                        ` : `
+                            <div class="wallet-balance">
+                                <div class="balance-label">USDC Balance</div>
+                                <div class="balance-amount" style="color: var(--gray-400);">$0.00</div>
+                            </div>
+
+                            <div class="wallet-info">
+                                <div class="wallet-info-item">
+                                    <span class="wallet-info-label">Status:</span>
+                                    <span class="wallet-info-value">Wallet not created</span>
+                                </div>
+                            </div>
+
+                            <div class="wallet-actions">
+                                <button class="btn btn-primary" onclick="createWallet('${wallet.entityType}', '${wallet.entityId}', '${wallet.name}')">
+                                    ➕ Create Wallet
+                                </button>
+                            </div>
+                        `}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function createWallet(entityType, entityId, name) {
+            try {
+                showMessage('Creating wallet...', 'success');
+                
+                const response = await fetch(`${API_BASE}/api/circle/wallets`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        entityType,
+                        entityId,
+                        description: `${name} wallet`
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage(`Wallet created successfully for ${name}!`, 'success');
+                    setTimeout(() => {
+                        loadWallets();
+                    }, 1000);
+                } else {
+                    throw new Error(data.error || 'Failed to create wallet');
+                }
+            } catch (error) {
+                console.error('Error creating wallet:', error);
+                showMessage(`Failed to create wallet: ${error.message}`, 'error');
+            }
+        }
+
+        async function refreshBalance(entityType, entityId) {
+            try {
+                showMessage('Refreshing balance...', 'success');
+                
+                const response = await fetch(`${API_BASE}/api/circle/accounts/${entityType}/${entityId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('Balance refreshed!', 'success');
+                    setTimeout(() => {
+                        loadWallets();
+                    }, 500);
+                } else {
+                    throw new Error(data.error || 'Failed to refresh balance');
+                }
+            } catch (error) {
+                console.error('Error refreshing balance:', error);
+                showMessage(`Failed to refresh balance: ${error.message}`, 'error');
+            }
+        }
+
+        function showMessage(message, type) {
+            const errorEl = document.getElementById('errorMessage');
+            const successEl = document.getElementById('successMessage');
+
+            if (type === 'error') {
+                errorEl.textContent = message;
+                errorEl.style.display = 'block';
+                successEl.style.display = 'none';
+            } else {
+                successEl.textContent = message;
+                successEl.style.display = 'block';
+                errorEl.style.display = 'none';
+            }
+
+            setTimeout(() => {
+                errorEl.style.display = 'none';
+                successEl.style.display = 'none';
+            }, 5000);
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = '../login.html';
+        }
+    </script>
+</body>
+
+</html>
+

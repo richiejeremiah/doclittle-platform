@@ -22,6 +22,7 @@
     "author": "Your Name",
     "license": "MIT",
     "dependencies": {
+        "@circle-fin/developer-controlled-wallets": "^9.2.1",
         "axios": "^1.6.2",
         "bcryptjs": "^2.4.3",
         "better-sqlite3": "^9.2.2",

@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Medical Coding - doclittle- AI Voice Receptionist</title>
+    <title>PDF Medical Coding - Medical Coding Assistant</title>
     <style>
         * {
             margin: 0;
@@ -13,8 +14,10 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #f8fafc;
+            background: #f3f4f6;
             color: #1e293b;
+            margin: 0;
+            padding: 0;
         }
 
         .container {
@@ -23,20 +26,47 @@
             overflow: hidden;
         }
 
-        /* Left Sidebar */
+        /* Left Sidebar - Match Dashboard Design */
         .sidebar {
-            width: 280px;
-            background: #1e293b;
-            color: white;
-            padding: 24px;
+            width: 260px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            position: fixed;
+            height: 100vh;
             overflow-y: auto;
         }
 
-        .logo {
-            font-size: 24px;
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .sidebar-logo {
+            font-size: 32px;
+            line-height: 1;
+            letter-spacing: -3px;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-logo .doc {
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+        }
+
+        .sidebar-logo .little {
+            font-family: 'Verdana', Geneva, sans-serif;
             font-weight: 700;
-            margin-bottom: 32px;
-            color: #60a5fa;
+        }
+
+        .sidebar-subtitle {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .sidebar-nav {
+            padding: 16px;
         }
 
         .nav-item {
@@ -44,20 +74,22 @@
             align-items: center;
             gap: 12px;
             padding: 12px 16px;
-            margin-bottom: 8px;
             border-radius: 8px;
-            color: #cbd5e1;
-            text-decoration: none;
+            color: #374151;
+            font-weight: 500;
+            cursor: pointer;
             transition: all 0.2s;
+            margin-bottom: 4px;
+            text-decoration: none;
         }
 
         .nav-item:hover {
-            background: #334155;
-            color: white;
+            background: #f3f4f6;
+            color: #1e40af;
         }
 
         .nav-item.active {
-            background: #3b82f6;
+            background: #1e40af;
             color: white;
         }
 
@@ -65,8 +97,69 @@
             font-size: 20px;
         }
 
+        .sidebar-footer {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            padding: 16px;
+            border-top: 1px solid #e2e8f0;
+            background: white;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            background: #f3f4f6;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #1e40af;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: #1e293b;
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: #e2e8f0;
+        }
+
         /* Main Content */
         .main-content {
+            margin-left: 260px;
             flex: 1;
             display: flex;
             flex-direction: column;
@@ -77,13 +170,14 @@
             background: white;
             padding: 24px;
             border-bottom: 1px solid #e2e8f0;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         .header h1 {
             font-size: 24px;
             font-weight: 700;
             margin-bottom: 8px;
+            color: #1e293b;
         }
 
         .header p {
@@ -105,7 +199,7 @@
             flex: 1;
             background: white;
             border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -171,7 +265,7 @@
             display: block;
             max-width: 100%;
             height: auto;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         #overlayCanvas {
@@ -190,11 +284,50 @@
             padding: 6px 10px;
             border-radius: 4px;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
+            position: relative;
         }
 
         .extracted-text-line:hover {
-            background: #f1f5f9;
+            background: #f1f5f9 !important;
+            transform: translateX(3px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .extracted-text-line.clickable::after {
+            content: '→';
+            position: absolute;
+            right: 10px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            color: #3b82f6;
+            font-weight: bold;
+        }
+
+        .extracted-text-line.clickable:hover::after {
+            opacity: 0.7;
+        }
+
+        .codes-panel {
+            scroll-margin-top: 20px;
+        }
+
+        .code-item.highlighted {
+            background: #fef3c7 !important;
+            border: 2px solid #f59e0b !important;
+            animation: pulse 0.5s ease-in-out;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.02);
+            }
         }
 
         .extracted-text-line.highlight-icd10 {
@@ -222,7 +355,7 @@
             width: 400px;
             background: white;
             border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -326,45 +459,79 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
-        <!-- Sidebar -->
+        <!-- Sidebar - Dynamic based on authentication -->
         <div class="sidebar">
-            <div class="logo">DocLittle.</div>
-            <div style="font-size: 12px; color: #94a3b8; margin-bottom: 24px;">AI Voice Receptionist</div>
-            
-            <a href="dashboard.html" class="nav-item">
-                <span class="nav-icon">📊</span>
-                <span>Dashboard</span>
-            </a>
-            <a href="patients.html" class="nav-item">
-                <span class="nav-icon">👥</span>
-                <span>Clients</span>
-            </a>
-            <a href="calendar.html" class="nav-item">
-                <span class="nav-icon">📅</span>
-                <span>Calendar</span>
-            </a>
-            <a href="billing.html" class="nav-item">
-                <span class="nav-icon">🧾</span>
-                <span>Billing</span>
-            </a>
-            <a href="pdf-coding.html" class="nav-item active">
-                <span class="nav-icon">📄</span>
-                <span>PDF Coding</span>
-            </a>
-            <a href="agent.html" class="nav-item">
-                <span class="nav-icon">🎙️</span>
-                <span>Voice Agent</span>
-            </a>
-            <a href="treatments.html" class="nav-item">
-                <span class="nav-icon">💊</span>
-                <span>Knowledge Base</span>
-            </a>
-            <a href="settings.html" class="nav-item">
-                <span class="nav-icon">⚙️</span>
-                <span>Settings</span>
-            </a>
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <span class="doc">Doc</span><span class="little">Little</span><span
+                        style="font-weight:700;">.</span>
+                </div>
+                <div class="sidebar-subtitle">Medical Coding Assistant</div>
+            </div>
+
+            <!-- Navigation for authenticated users (full dashboard access) -->
+            <nav class="sidebar-nav" id="authenticatedNav" style="display: none;">
+                <a href="pdf-coding.html" class="nav-item active">
+                    <span class="nav-icon">📄</span>
+                    <span>Scan</span>
+                </a>
+                <a href="invoices.html" class="nav-item">
+                    <span class="nav-icon">🧾</span>
+                    <span>Invoices</span>
+                </a>
+                <a href="patients.html" class="nav-item">
+                    <span class="nav-icon">👥</span>
+                    <span>Patients</span>
+                </a>
+                <a href="billing.html" class="nav-item">
+                    <span class="nav-icon">💳</span>
+                    <span>Billing</span>
+                </a>
+                <a href="wallets.html" class="nav-item">
+                    <span class="nav-icon">💰</span>
+                    <span>Wallets</span>
+                </a>
+                <a href="calendar.html" class="nav-item">
+                    <span class="nav-icon">📅</span>
+                    <span>Calendar</span>
+                </a>
+            </nav>
+
+            <!-- Navigation for public users (scan-only access) -->
+            <nav class="sidebar-nav" id="publicNav">
+                <a href="../index.html" class="nav-item">
+                    <span class="nav-icon">🏠</span>
+                    <span>Home</span>
+                </a>
+                <div class="nav-item active" style="cursor: default;">
+                    <span class="nav-icon">📄</span>
+                    <span>Scan PDF</span>
+                </div>
+            </nav>
+
+            <!-- Footer for authenticated users -->
+            <div class="sidebar-footer" id="authenticatedFooter" style="display: none;">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">HP</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">Healthcare Provider</div>
+                        <div class="user-role" id="userRole">Provider</div>
+                    </div>
+                    <button class="logout-btn" onclick="logout()" title="Logout">
+                        🚪
+                    </button>
+                </div>
+            </div>
+
+            <!-- Footer for public users -->
+            <div class="sidebar-footer" id="publicFooter">
+                <div style="text-align: center; color: #64748b; font-size: 12px; padding: 12px;">
+                    Scan-only access
+                </div>
+            </div>
         </div>
 
         <!-- Main Content -->
@@ -382,7 +549,9 @@
                             <strong id="fileName">No PDF loaded</strong>
                             <div id="fileInfo" style="font-size: 12px; color: #64748b; margin-top: 4px;"></div>
                         </div>
-                        <button id="uploadBtn" class="btn btn-primary" style="padding: 8px 16px; border: none; border-radius: 6px; background: #3b82f6; color: white; cursor: pointer;">Upload PDF</button>
+                        <button id="uploadBtn" class="btn btn-primary"
+                            style="padding: 8px 16px; border: none; border-radius: 6px; background: #3b82f6; color: white; cursor: pointer;">Upload
+                            PDF</button>
                     </div>
 
                     <div id="uploadArea" class="upload-area">
@@ -395,37 +564,46 @@
                     <div id="pdfViewer" class="pdf-viewer" style="display: none;">
                         <div style="display: flex; gap: 16px; height: 100%;">
                             <!-- PDF Canvas Container -->
-                            <div id="pdfContainer" style="flex: 1; position: relative; overflow: auto; background: #f8fafc; border-radius: 8px; padding: 16px;">
-                                <div id="pdfCanvasWrapper" style="position: relative; display: inline-block; margin: 0 auto;">
+                            <div id="pdfContainer"
+                                style="flex: 1; position: relative; overflow: auto; background: #f8fafc; border-radius: 8px; padding: 16px;">
+                                <div id="pdfCanvasWrapper"
+                                    style="position: relative; display: inline-block; margin: 0 auto;">
                                     <canvas id="pdfCanvas"></canvas>
-                                    <canvas id="overlayCanvas" style="position: absolute; top: 0; left: 0; pointer-events: none; display: none;"></canvas>
+                                    <canvas id="overlayCanvas"
+                                        style="position: absolute; top: 0; left: 0; pointer-events: none; display: none;"></canvas>
                                 </div>
                                 <!-- Page Navigation -->
                                 <div style="text-align: center; margin-top: 16px; padding: 12px;">
-                                    <button id="prevPage" style="padding: 8px 16px; margin: 0 8px; border: 1px solid #e2e8f0; border-radius: 6px; background: white; cursor: pointer;">Previous</button>
+                                    <button id="prevPage"
+                                        style="padding: 8px 16px; margin: 0 8px; border: 1px solid #e2e8f0; border-radius: 6px; background: white; cursor: pointer;">Previous</button>
                                     <span id="pageInfo" style="margin: 0 16px; color: #64748b;">Page 1 of 1</span>
-                                    <button id="nextPage" style="padding: 8px 16px; margin: 0 8px; border: 1px solid #e2e8f0; border-radius: 6px; background: white; cursor: pointer;">Next</button>
+                                    <button id="nextPage"
+                                        style="padding: 8px 16px; margin: 0 8px; border: 1px solid #e2e8f0; border-radius: 6px; background: white; cursor: pointer;">Next</button>
                                 </div>
                             </div>
-                            
+
                             <!-- Extracted Text Overlay Panel -->
-                            <div id="textOverlayPanel" style="width: 300px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; overflow-y: auto; max-height: 100%;">
-                                <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #64748b;">Extracted Text</h3>
-                                <div id="extractedTextContent" style="font-size: 12px; line-height: 1.6; color: #1e293b;"></div>
+                            <div id="textOverlayPanel"
+                                style="width: 300px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; overflow-y: auto; max-height: 100%;">
+                                <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #64748b;">
+                                    Extracted Text</h3>
+                                <div id="extractedTextContent"
+                                    style="font-size: 12px; line-height: 1.6; color: #1e293b;"></div>
                             </div>
                         </div>
                     </div>
 
                     <div id="loading" class="loading" style="display: none;">
                         <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
-                        <div>Processing PDF and extracting codes...</div>
+                        <p style="margin: 0; font-size: 16px; color: #64748b;">Processing PDF and extracting codes...
+                        </p>
                     </div>
 
                     <div id="error" class="error" style="display: none;"></div>
                 </div>
 
                 <!-- Codes Panel -->
-                <div class="codes-panel">
+                <div class="codes-panel" id="medicalCodesSection">
                     <div class="codes-header">
                         <h2>Medical Codes</h2>
                         <div id="codingBand" style="display: none;"></div>
@@ -452,6 +630,28 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Patient Selection and Create Claim Section -->
+                    <div class="claim-section" id="claimSection"
+                        style="display: none; margin-top: 24px; padding: 24px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #1e293b;">Create Claim
+                        </h3>
+                        <div style="margin-bottom: 16px;">
+                            <label for="patientSelect"
+                                style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: #374151;">
+                                Select Patient
+                            </label>
+                            <select id="patientSelect"
+                                style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white; color: #1e293b;">
+                                <option value="">-- Select a patient --</option>
+                            </select>
+                        </div>
+                        <button id="createClaimBtn" class="btn-primary"
+                            style="width: 100%; padding: 12px; background: #1e40af; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s;"
+                            disabled>
+                            Create Claim
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -468,6 +668,9 @@
         let pdfScale = 1.5;
         let textMatches = [];
         let pdfjsLib = null;
+        // Store extracted codes globally for claim creation
+        let extractedCodingData = null;
+        let extractedPricingData = null;
 
         // Wait for DOM and PDF.js to load
         function initializeApp() {
@@ -497,69 +700,91 @@
             const fileInput = document.getElementById('fileInput');
             const uploadBtn = document.getElementById('uploadBtn');
             const pdfViewer = document.getElementById('pdfViewer');
-            const pdfFrame = document.getElementById('pdfFrame');
-            const pdfTextOverlay = document.getElementById('pdfTextOverlay');
+            const pdfCanvas = document.getElementById('pdfCanvas');
+            const overlayCanvas = document.getElementById('overlayCanvas');
             const loading = document.getElementById('loading');
             const error = document.getElementById('error');
 
             if (!uploadArea || !fileInput || !uploadBtn || !pdfViewer) {
-                console.error('Required DOM elements not found');
+                console.error('Required DOM elements not found:', {
+                    uploadArea: !!uploadArea,
+                    fileInput: !!fileInput,
+                    uploadBtn: !!uploadBtn,
+                    pdfViewer: !!pdfViewer
+                });
+                const errorEl = document.getElementById('error');
+                if (errorEl) {
+                    errorEl.textContent = 'Error: Page not fully loaded. Please refresh.';
+                    errorEl.style.display = 'block';
+                }
                 return;
             }
-        
-            // Create canvas for PDF rendering
-            const pdfCanvas = document.createElement('canvas');
-            pdfCanvas.id = 'pdfCanvas';
-            pdfCanvas.style.width = '100%';
-            pdfCanvas.style.height = 'auto';
-            pdfCanvas.style.border = '1px solid #e2e8f0';
-            pdfCanvas.style.borderRadius = '8px';
-        
-            // Create overlay canvas for highlights
-            const overlayCanvas = document.createElement('canvas');
-            overlayCanvas.id = 'overlayCanvas';
-            overlayCanvas.style.position = 'absolute';
-            overlayCanvas.style.top = '0';
-            overlayCanvas.style.left = '0';
-            overlayCanvas.style.pointerEvents = 'none';
-            overlayCanvas.style.display = 'none'; // Hidden as per user request
-        
-            // Container for PDF rendering
-            const pdfContainer = document.createElement('div');
-            pdfContainer.style.position = 'relative';
-            pdfContainer.style.display = 'inline-block';
-            pdfContainer.style.width = '100%';
 
-            pdfContainer.appendChild(pdfCanvas);
-            pdfContainer.appendChild(overlayCanvas);
-            pdfTextOverlay.appendChild(pdfContainer);
+            console.log('✅ All DOM elements found');
 
-            uploadBtn.addEventListener('click', () => fileInput.click());
-            uploadArea.addEventListener('click', () => fileInput.click());
+            // Canvas elements already exist in HTML, no need to create them
+            if (!pdfCanvas || !overlayCanvas) {
+                console.warn('Canvas elements not found, but continuing...');
+            }
 
+            // Set up upload button click handler
+            uploadBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('✅ Upload button clicked');
+                fileInput.click();
+            });
+
+            // Set up upload area click handler
+            uploadArea.addEventListener('click', (e) => {
+                // Don't trigger if clicking the button
+                if (e.target !== uploadBtn && !uploadBtn.contains(e.target)) {
+                    console.log('✅ Upload area clicked');
+                    fileInput.click();
+                }
+            });
+
+            // Set up drag and drop handlers
             uploadArea.addEventListener('dragover', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 uploadArea.classList.add('dragover');
             });
 
-            uploadArea.addEventListener('dragleave', () => {
+            uploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 uploadArea.classList.remove('dragover');
             });
 
             uploadArea.addEventListener('drop', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 uploadArea.classList.remove('dragover');
                 const files = e.dataTransfer.files;
+                console.log('✅ Files dropped:', files.length);
                 if (files.length > 0 && files[0].type === 'application/pdf') {
                     handleFileUpload(files[0]);
+                } else {
+                    showError('Please drop a PDF file');
                 }
             });
 
+            // Set up file input change handler
             fileInput.addEventListener('change', (e) => {
-                if (e.target.files.length > 0) {
-                    handleFileUpload(e.target.files[0]);
+                console.log('✅ File input changed');
+                if (e.target.files && e.target.files.length > 0) {
+                    const file = e.target.files[0];
+                    console.log('✅ File selected:', file.name, file.type, file.size);
+                    if (file.type === 'application/pdf') {
+                        handleFileUpload(file);
+                    } else {
+                        showError('Please select a PDF file');
+                    }
                 }
             });
+
+            console.log('✅ Event listeners attached successfully');
 
             // Set up page navigation
             setupPageNavigation();
@@ -571,21 +796,40 @@
         function waitForPDFJS() {
             if (typeof window.pdfjsLib !== 'undefined') {
                 pdfjsLib = window.pdfjsLib;
+                console.log('✅ PDF.js loaded successfully');
                 if (document.readyState === 'loading') {
                     document.addEventListener('DOMContentLoaded', initializeApp);
                 } else {
-                    initializeApp();
+                    // DOM already loaded, initialize immediately
+                    console.log('✅ DOM ready, initializing app...');
+                    setTimeout(initializeApp, 50);
                 }
             } else {
-                // Wait a bit longer for CDN to load
-                setTimeout(waitForPDFJS, 100);
+                // Wait a bit longer for CDN to load (max 10 seconds)
+                const attempts = waitForPDFJS.attempts || 0;
+                waitForPDFJS.attempts = attempts + 1;
+                if (attempts < 100) { // 10 seconds max wait
+                    setTimeout(waitForPDFJS, 100);
+                } else {
+                    console.error('❌ PDF.js failed to load after 10 seconds');
+                    const errorEl = document.getElementById('error');
+                    if (errorEl) {
+                        errorEl.textContent = 'Error: PDF.js library failed to load. Please refresh the page.';
+                        errorEl.style.display = 'block';
+                    }
+                }
             }
         }
 
         // Start waiting for PDF.js
+        console.log('🚀 Starting PDF Coding page initialization...');
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', waitForPDFJS);
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('✅ DOM loaded, waiting for PDF.js...');
+                waitForPDFJS();
+            });
         } else {
+            console.log('✅ DOM already loaded, waiting for PDF.js...');
             waitForPDFJS();
         }
 
@@ -598,6 +842,204 @@
                 }
             }
         });
+
+        // Authentication and Navigation Setup
+        function setupNavigation() {
+            const isAuthenticated = sessionStorage.getItem('authenticated') === 'true';
+            const authenticatedNav = document.getElementById('authenticatedNav');
+            const publicNav = document.getElementById('publicNav');
+            const authenticatedFooter = document.getElementById('authenticatedFooter');
+            const publicFooter = document.getElementById('publicFooter');
+
+            if (isAuthenticated) {
+                // Show full dashboard navigation for authenticated users
+                if (authenticatedNav) authenticatedNav.style.display = 'block';
+                if (publicNav) publicNav.style.display = 'none';
+                if (authenticatedFooter) authenticatedFooter.style.display = 'block';
+                if (publicFooter) publicFooter.style.display = 'none';
+
+                // Load user info
+                const userName = sessionStorage.getItem('userName') || 'Healthcare Provider';
+                const userRole = sessionStorage.getItem('userRole') || 'Provider';
+                const userAvatarEl = document.getElementById('userAvatar');
+                const userNameEl = document.getElementById('userName');
+                const userRoleEl = document.getElementById('userRole');
+
+                if (userNameEl) userNameEl.textContent = userName;
+                if (userRoleEl) userRoleEl.textContent = userRole;
+                if (userAvatarEl) {
+                    // Set avatar initials
+                    const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                    userAvatarEl.textContent = initials || 'HP';
+                }
+            } else {
+                // Show restricted navigation for public users
+                if (authenticatedNav) authenticatedNav.style.display = 'none';
+                if (publicNav) publicNav.style.display = 'block';
+                if (authenticatedFooter) authenticatedFooter.style.display = 'none';
+                if (publicFooter) publicFooter.style.display = 'block';
+            }
+        }
+
+        // Logout function
+        function logout() {
+            sessionStorage.removeItem('authenticated');
+            sessionStorage.removeItem('userName');
+            sessionStorage.removeItem('userRole');
+            window.location.href = '../login.html';
+        }
+
+        // Load patients for dropdown
+        async function loadPatients() {
+            try {
+                console.log('Loading patients from:', `${API_BASE}/fhir/Patient`);
+                const response = await fetch(`${API_BASE}/fhir/Patient`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const bundle = await response.json();
+                console.log('Patients bundle received:', bundle);
+
+                const patientSelect = document.getElementById('patientSelect');
+
+                if (!patientSelect) {
+                    console.error('Patient select element not found');
+                    return;
+                }
+
+                // Clear existing options
+                patientSelect.innerHTML = '<option value="">-- Select a patient --</option>';
+
+                // Extract patients from FHIR Bundle
+                let patients = [];
+                if (bundle.resourceType === 'Bundle' && bundle.entry) {
+                    patients = bundle.entry.map(e => e.resource).filter(r => r.resourceType === 'Patient');
+                } else if (Array.isArray(bundle)) {
+                    patients = bundle;
+                }
+
+                if (patients.length === 0) {
+                    console.warn('No patients found in response');
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = '-- No patients available --';
+                    option.disabled = true;
+                    patientSelect.appendChild(option);
+                    return;
+                }
+
+                // Add patients to dropdown
+                patients.forEach(patient => {
+                    const option = document.createElement('option');
+
+                    // Get patient ID (FHIR resource ID)
+                    const patientId = patient.id || patient.resource_id;
+                    if (!patientId) return; // Skip if no ID
+
+                    option.value = patientId;
+
+                    // Get patient name from FHIR structure
+                    let patientName = 'Unknown Patient';
+                    if (patient.name && patient.name.length > 0) {
+                        const name = patient.name[0];
+                        const given = (name.given || []).join(' ');
+                        const family = name.family || '';
+                        patientName = `${given} ${family}`.trim() || 'Unknown Patient';
+                    }
+
+                    option.textContent = patientName;
+                    patientSelect.appendChild(option);
+                });
+
+                console.log(`Loaded ${patients.length} patients into dropdown`);
+            } catch (error) {
+                console.error('Error loading patients:', error);
+                const patientSelect = document.getElementById('patientSelect');
+                if (patientSelect) {
+                    patientSelect.innerHTML = '<option value="">-- Error loading patients --</option>';
+                }
+            }
+        }
+
+        // Handle patient selection and Create Claim button
+        document.addEventListener('DOMContentLoaded', function () {
+            const patientSelect = document.getElementById('patientSelect');
+            const createClaimBtn = document.getElementById('createClaimBtn');
+
+            if (patientSelect) {
+                patientSelect.addEventListener('change', function () {
+                    if (createClaimBtn) {
+                        createClaimBtn.disabled = !this.value;
+                    }
+                });
+            }
+
+            if (createClaimBtn) {
+                createClaimBtn.addEventListener('click', async function () {
+                    const selectedPatientId = patientSelect?.value;
+
+                    if (!selectedPatientId) {
+                        alert('Please select a patient first');
+                        return;
+                    }
+
+                    if (!extractedCodingData || !extractedPricingData) {
+                        alert('No medical codes found. Please scan a PDF first.');
+                        return;
+                    }
+
+                    // Disable button during creation
+                    createClaimBtn.disabled = true;
+                    createClaimBtn.textContent = 'Creating Claim...';
+
+                    try {
+                        // Create claim from PDF coding data
+                        const claimData = {
+                            patientId: selectedPatientId,
+                            coding: extractedCodingData,
+                            pricing: extractedPricingData,
+                            pdfText: currentPDFText,
+                            fileName: document.getElementById('fileName')?.textContent || 'uploaded.pdf'
+                        };
+
+                        const response = await fetch(`${API_BASE}/api/claims/create-from-pdf`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(claimData)
+                        });
+
+                        if (!response.ok) {
+                            const error = await response.json();
+                            throw new Error(error.error || 'Failed to create claim');
+                        }
+
+                        const result = await response.json();
+
+                        if (result.success && result.claimId) {
+                            // Redirect to claims page
+                            window.location.href = `claims.html?id=${result.claimId}`;
+                        } else {
+                            throw new Error(result.error || 'Failed to create claim');
+                        }
+                    } catch (error) {
+                        console.error('Error creating claim:', error);
+                        alert('Error creating claim: ' + error.message);
+                        createClaimBtn.disabled = false;
+                        createClaimBtn.textContent = 'Create Claim';
+                    }
+                });
+            }
+        });
+
+        // Setup navigation on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupNavigation);
+        } else {
+            setupNavigation();
+        }
 
         async function handleFileUpload(file) {
             if (!pdfjsLib) {
@@ -627,25 +1069,63 @@
             error.style.display = 'none';
 
             // Update file info
-            document.getElementById('fileName').textContent = file.name;
-            document.getElementById('fileInfo').textContent = `${(file.size / 1024).toFixed(2)} KB`;
+            const fileNameEl = document.getElementById('fileName');
+            const fileInfoEl = document.getElementById('fileInfo');
+            if (fileNameEl) fileNameEl.textContent = file.name;
+            if (fileInfoEl) fileInfoEl.textContent = `${(file.size / 1024).toFixed(2)} KB`;
 
             try {
+                // Update loading message
+                const loadingText = document.querySelector('#loading p');
+                if (loadingText) loadingText.textContent = 'Loading PDF...';
+
                 // First, load PDF for rendering
+                console.log('📖 Loading PDF for preview...');
                 const arrayBuffer = await file.arrayBuffer();
                 pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
                 currentPage = 1;
+                console.log('✅ PDF loaded, pages:', pdfDoc.numPages);
+
+                // Update loading message
+                if (loadingText) loadingText.textContent = 'Uploading and processing PDF... This may take 30-60 seconds.';
 
                 // Create FormData for processing
                 const formData = new FormData();
                 formData.append('pdf', file);
 
-                // Upload and process PDF
-                const response = await fetch(`${API_BASE}/api/pdf-coding/process`, {
-                    method: 'POST',
-                    body: formData
-                });
+                // Upload and process PDF with timeout
+                console.log('📤 Uploading PDF to server...');
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
 
+                let response;
+                try {
+                    response = await fetch(`${API_BASE}/api/pdf-coding/process`, {
+                        method: 'POST',
+                        body: formData,
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                } catch (fetchError) {
+                    clearTimeout(timeoutId);
+                    if (fetchError.name === 'AbortError') {
+                        throw new Error('Request timed out. The PDF is taking too long to process. Please try a smaller file or check your connection.');
+                    }
+                    throw new Error(`Network error: ${fetchError.message}`);
+                }
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(errorText);
+                    } catch {
+                        errorData = { error: errorText || `Server error: ${response.status}` };
+                    }
+                    throw new Error(errorData.error || `Server error: ${response.status}`);
+                }
+
+                console.log('📥 Received response, parsing...');
                 const result = await response.json();
 
                 if (!result.success) {
@@ -672,19 +1152,31 @@
 
             } catch (err) {
                 console.error('Error processing PDF:', err);
-                showError(err.message || 'Failed to process PDF');
+                const errorMsg = err.message || 'Failed to process PDF';
+                console.error('Full error:', err);
+                showError(errorMsg);
                 const loading = document.getElementById('loading');
                 const uploadArea = document.getElementById('uploadArea');
-                loading.style.display = 'none';
-                uploadArea.style.display = 'block';
+                if (loading) loading.style.display = 'none';
+                if (uploadArea) uploadArea.style.display = 'block';
             }
         }
 
         async function renderPDFWithHighlights(result) {
+            if (!pdfDoc) {
+                console.error('PDF document not loaded');
+                return;
+            }
+
             const page = await pdfDoc.getPage(currentPage);
             const viewport = page.getViewport({ scale: pdfScale });
-            
+
             const canvas = document.getElementById('pdfCanvas');
+            if (!canvas) {
+                console.error('PDF canvas element not found');
+                return;
+            }
+
             const context = canvas.getContext('2d');
             canvas.height = viewport.height;
             canvas.width = viewport.width;
@@ -697,10 +1189,12 @@
 
             // Clear overlay canvas (no PDF highlighting)
             const overlay = document.getElementById('overlayCanvas');
-            overlay.height = viewport.height;
-            overlay.width = viewport.width;
-            const overlayCtx = overlay.getContext('2d');
-            overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
+            if (overlay) {
+                overlay.height = viewport.height;
+                overlay.width = viewport.width;
+                const overlayCtx = overlay.getContext('2d');
+                overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
+            }
 
             // Update page info
             document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${pdfDoc.numPages}`;
@@ -712,7 +1206,7 @@
         function setupPageNavigation() {
             const prevBtn = document.getElementById('prevPage');
             const nextBtn = document.getElementById('nextPage');
-            
+
             if (prevBtn) {
                 prevBtn.addEventListener('click', async () => {
                     if (pdfDoc && currentPage > 1) {
@@ -721,7 +1215,7 @@
                     }
                 });
             }
-            
+
             if (nextBtn) {
                 nextBtn.addEventListener('click', async () => {
                     if (pdfDoc && currentPage < pdfDoc.numPages) {
@@ -741,11 +1235,11 @@
 
         function displayExtractedText(textLines, coding) {
             const extractedTextDiv = document.getElementById('extractedTextContent');
-            
+
             // Create search terms map - ONLY exact codes and key procedure/diagnosis terms
             const searchTerms = new Map();
             const exactCodes = new Set(); // For exact code matches
-            
+
             // Add ICD-10 codes (exact matches only)
             if (coding.icd10 && coding.icd10.length > 0) {
                 coding.icd10.forEach(icd => {
@@ -754,7 +1248,7 @@
                     searchTerms.set(code, 'icd10');
                 });
             }
-            
+
             // Add CPT codes (exact matches only)
             if (coding.cpt && coding.cpt.length > 0) {
                 coding.cpt.forEach(cpt => {
@@ -763,7 +1257,7 @@
                     searchTerms.set(code, 'cpt');
                 });
             }
-            
+
             // Extract ONLY key procedure/diagnosis terms from code descriptions (no generic words)
             const keyTerms = new Set();
             if (coding.icd10) {
@@ -780,21 +1274,21 @@
                     }
                 });
             }
-            
+
             if (coding.cpt) {
                 coding.cpt.forEach(cpt => {
                     if (cpt.description) {
                         // Extract key procedure terms (specific medical procedures only)
                         const skipWords = new Set(['with', 'patient', 'when', 'performed', 'during', 'includes', 'real', 'time', 'image', 'documentation']);
                         const desc = cpt.description.toLowerCase();
-                        
+
                         // Look for specific procedure keywords
                         if (desc.includes('echocardiogram')) keyTerms.add({ term: 'echocardiogram', type: 'cpt' });
                         if (desc.includes('transthoracic')) keyTerms.add({ term: 'transthoracic', type: 'cpt' });
                         if (desc.includes('psychotherapy')) keyTerms.add({ term: 'psychotherapy', type: 'cpt' });
                         if (desc.includes('cognitive')) keyTerms.add({ term: 'cognitive', type: 'cpt' });
                         if (desc.includes('behavioral')) keyTerms.add({ term: 'behavioral', type: 'cpt' });
-                        
+
                         desc.split(/[\s,.-]+/).forEach(word => {
                             const clean = word.trim().toLowerCase();
                             if (clean.length >= 8 && !skipWords.has(clean) && /^[a-z]+$/.test(clean)) {
@@ -809,19 +1303,19 @@
                 let classes = 'extracted-text-line';
                 const lineText = line.text;
                 const lineLower = lineText.toLowerCase();
-                
+
                 // Check for exact code matches first
                 let hasICD10 = false;
                 let hasCPT = false;
                 let highlightedText = escapeHtml(lineText);
-                
+
                 // Check for exact code matches
                 exactCodes.forEach(code => {
                     if (lineText.includes(code.toUpperCase()) || lineText.includes(code)) {
                         const type = searchTerms.get(code);
                         if (type === 'icd10') hasICD10 = true;
                         if (type === 'cpt') hasCPT = true;
-                        
+
                         // Highlight exact code
                         const codeRegex = new RegExp(`\\b${code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
                         highlightedText = highlightedText.replace(codeRegex, (match) => {
@@ -829,7 +1323,7 @@
                         });
                     }
                 });
-                
+
                 // Check for key terms (only if code not found)
                 if (!hasICD10 && !hasCPT) {
                     keyTerms.forEach(({ term, type }) => {
@@ -838,7 +1332,7 @@
                         if (wordRegex.test(lineLower)) {
                             if (type === 'icd10') hasICD10 = true;
                             if (type === 'cpt') hasCPT = true;
-                            
+
                             // Highlight key term
                             highlightedText = highlightedText.replace(wordRegex, (match) => {
                                 return `<span class="match-highlight" style="background: ${type === 'icd10' ? '#dbeafe' : '#dcfce7'}; padding: 2px 4px; border-radius: 2px;">${match}</span>`;
@@ -849,23 +1343,117 @@
 
                 // Apply line-level highlighting
                 if (hasICD10 && hasCPT) {
-                    classes += ' highlight-both';
+                    classes += ' highlight-both clickable';
                 } else if (hasICD10) {
-                    classes += ' highlight-icd10';
+                    classes += ' highlight-icd10 clickable';
                 } else if (hasCPT) {
-                    classes += ' highlight-cpt';
+                    classes += ' highlight-cpt clickable';
                 }
 
-                return `<div class="${classes}">${highlightedText}</div>`;
+                // Store code information in data attributes for click handler
+                const codeData = [];
+                if (hasICD10) {
+                    exactCodes.forEach(code => {
+                        if (searchTerms.get(code) === 'icd10' && (lineText.includes(code.toUpperCase()) || lineText.includes(code))) {
+                            codeData.push({ type: 'icd10', code: code.toUpperCase() });
+                        }
+                    });
+                }
+                if (hasCPT) {
+                    exactCodes.forEach(code => {
+                        if (searchTerms.get(code) === 'cpt' && (lineText.includes(code.toUpperCase()) || lineText.includes(code))) {
+                            codeData.push({ type: 'cpt', code: code.toUpperCase() });
+                        }
+                    });
+                }
+
+                const dataAttr = codeData.length > 0 ? `data-codes='${JSON.stringify(codeData).replace(/'/g, "&apos;")}'` : '';
+                return `<div class="${classes}" ${dataAttr}>${highlightedText}</div>`;
             }).join('');
+
+            // Attach click handlers after HTML is inserted
+            setTimeout(() => {
+                attachTextLineClickHandlers();
+            }, 0);
+        }
+
+        function scrollToCodes(clickedElement) {
+            const codesSection = document.getElementById('medicalCodesSection');
+            if (!codesSection) return;
+
+            // Get code data from clicked element
+            const codeDataStr = clickedElement.getAttribute('data-codes');
+            if (!codeDataStr) {
+                // Just scroll to codes section if no specific codes
+                codesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                return;
+            }
+
+            try {
+                const codeData = JSON.parse(codeDataStr);
+
+                // Scroll to codes section
+                codesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                // Highlight matching codes after a short delay
+                setTimeout(() => {
+                    codeData.forEach(({ type, code }) => {
+                        const codeItems = document.querySelectorAll(`#${type === 'icd10' ? 'icd10Codes' : 'cptCodes'} .code-item`);
+                        codeItems.forEach(item => {
+                            const codeValue = item.querySelector('.code-value');
+                            if (codeValue && codeValue.textContent.trim() === code) {
+                                // Highlight this code
+                                item.classList.add('highlighted');
+
+                                // Remove highlight after 3 seconds
+                                setTimeout(() => {
+                                    item.classList.remove('highlighted');
+                                }, 3000);
+
+                                // Scroll the code into view within the codes panel
+                                item.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                            }
+                        });
+                    });
+                }, 300);
+            } catch (e) {
+                console.error('Error parsing code data:', e);
+                codesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        function attachTextLineClickHandlers() {
+            const textLines = document.querySelectorAll('#extractedTextContent .extracted-text-line.clickable');
+            textLines.forEach(line => {
+                // Remove any existing handlers to avoid duplicates
+                const newLine = line.cloneNode(true);
+                line.parentNode.replaceChild(newLine, line);
+
+                // Add click handler
+                newLine.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    scrollToCodes(this);
+                });
+            });
         }
 
         function displayCodes(coding, pricing) {
+            // Store codes for claim creation (variables already declared at top)
+            extractedCodingData = coding;
+            extractedPricingData = pricing;
+
             // Display coding band
             const bandDiv = document.getElementById('codingBand');
             const bandClass = `coding-band band-${coding.band.toLowerCase()}`;
             bandDiv.innerHTML = `<span class="${bandClass}">${coding.band} Case</span>`;
             bandDiv.style.display = 'block';
+
+            // Show claim section after codes are displayed
+            const claimSection = document.getElementById('claimSection');
+            if (claimSection) {
+                claimSection.style.display = 'block';
+                loadPatients();
+            }
 
             // Display ICD-10 codes
             const icd10Div = document.getElementById('icd10Codes');
@@ -910,5 +1498,5 @@
         }
     </script>
 </body>
-</html>
 
+</html>

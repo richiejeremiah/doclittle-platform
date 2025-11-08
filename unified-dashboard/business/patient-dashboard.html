@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Dashboard - Medical Coding Assistant</title>
+    <link rel="stylesheet" href="../assets/css/global.css">
+    <script src="../assets/js/config.js"></script>
+    <style>
+        :root {
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --primary-light: #3b82f6;
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+            background: #f7fafc;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .sidebar-logo {
+            font-size: 32px;
+            line-height: 1;
+            letter-spacing: -3px;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-logo .doc {
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+        }
+
+        .sidebar-logo .little {
+            font-family: 'Verdana', Geneva, sans-serif;
+            font-weight: 700;
+        }
+
+        .sidebar-subtitle {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-top: 4px;
+        }
+
+        .sidebar-nav {
+            padding: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--gray-700);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+            text-decoration: none;
+        }
+
+        .nav-item:hover {
+            background: var(--gray-50);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--gray-200);
+            position: absolute;
+            bottom: 0;
+            width: 260px;
+            background: white;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            padding: 32px;
+            flex: 1;
+        }
+
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            font-size: 16px;
+            color: var(--gray-600);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .card-icon {
+            font-size: 24px;
+        }
+
+        .wallet-balance {
+            margin: 20px 0;
+        }
+
+        .balance-label {
+            font-size: 12px;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .balance-amount {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .wallet-info {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .wallet-info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .wallet-info-label {
+            color: var(--gray-600);
+        }
+
+        .wallet-info-value {
+            color: var(--gray-900);
+            font-weight: 600;
+            font-family: monospace;
+            word-break: break-all;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-300);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .claims-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .claim-item {
+            padding: 16px;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .claim-item:last-child {
+            border-bottom: none;
+        }
+
+        .claim-info {
+            flex: 1;
+        }
+
+        .claim-date {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-bottom: 4px;
+        }
+
+        .claim-amount {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .claim-status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .claim-status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .claim-status.approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .claim-status.paid {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 48px;
+            color: var(--gray-600);
+        }
+
+        .error-message {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px;
+            color: var(--gray-500);
+        }
+
+        .refresh-btn {
+            padding: 8px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <span class="doc">Doc</span><span class="little">Little</span>.
+                </div>
+                <div class="sidebar-subtitle">Medical Coding Assistant</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="patient-dashboard.html" class="nav-item active">
+                    <span class="nav-icon">🏠</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="wallets.html" class="nav-item">
+                    <span class="nav-icon">💰</span>
+                    <span>My Wallet</span>
+                </a>
+                <a href="billing.html" class="nav-item">
+                    <span class="nav-icon">💳</span>
+                    <span>Bills & Claims</span>
+                </a>
+                <a href="patients.html" class="nav-item">
+                    <span class="nav-icon">📋</span>
+                    <span>Medical Records</span>
+                </a>
+                <a href="calendar.html" class="nav-item">
+                    <span class="nav-icon">📅</span>
+                    <span>Appointments</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">P</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">Patient</div>
+                        <div class="user-role">Patient Account</div>
+                    </div>
+                    <button class="logout-btn" onclick="logout()" title="Logout">🚪</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Patient Dashboard</h1>
+                <p class="page-subtitle">Welcome back! Here's your healthcare overview</p>
+            </div>
+
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Wallet Balance</div>
+                    <div class="stat-value" id="walletBalance">$0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Pending Claims</div>
+                    <div class="stat-value" id="pendingClaims">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Bills</div>
+                    <div class="stat-value" id="totalBills">$0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Upcoming Appointments</div>
+                    <div class="stat-value" id="upcomingAppointments">0</div>
+                </div>
+            </div>
+
+            <!-- Dashboard Grid -->
+            <div class="dashboard-grid">
+                <!-- Wallet Card -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div class="card-title">My Wallet</div>
+                        <div class="card-icon">💰</div>
+                    </div>
+                    <div class="wallet-balance">
+                        <div class="balance-label">USDC Balance</div>
+                        <div class="balance-amount" id="walletBalanceAmount">$0.00</div>
+                    </div>
+                    <div class="wallet-info">
+                        <div class="wallet-info-item">
+                            <span class="wallet-info-label">Wallet ID:</span>
+                            <span class="wallet-info-value" id="walletId">Loading...</span>
+                        </div>
+                        <div class="wallet-info-item">
+                            <span class="wallet-info-label">Status:</span>
+                            <span class="wallet-info-value" id="walletStatus">Active</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" style="width: 100%; margin-top: 16px;" onclick="refreshWallet()">
+                        🔄 Refresh Balance
+                    </button>
+                </div>
+
+                <!-- Recent Claims Card -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div class="card-title">Recent Claims</div>
+                        <div class="card-icon">📋</div>
+                    </div>
+                    <div id="claimsList">
+                        <div class="loading">Loading claims...</div>
+                    </div>
+                </div>
+
+                <!-- Medical Records Card -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div class="card-title">Medical Records</div>
+                        <div class="card-icon">📁</div>
+                    </div>
+                    <div style="padding: 20px 0;">
+                        <p style="color: var(--gray-600); margin-bottom: 16px;">Access your medical records and health information</p>
+                        <button class="btn btn-primary" style="width: 100%;" onclick="window.location.href='patients.html'">
+                            View Medical Records
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = window.API_BASE || 'http://localhost:4000';
+
+        // Check authentication
+        if (sessionStorage.getItem('authenticated') !== 'true') {
+            window.location.href = '../login.html';
+        }
+
+        // Load user info
+        const userData = JSON.parse(sessionStorage.getItem('user') || '{}');
+        if (userData.name) {
+            document.getElementById('userName').textContent = userData.name;
+            const initials = userData.name.split(' ').map(n => n[0]).join('').substring(0, 2);
+            document.getElementById('userAvatar').textContent = initials;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboard();
+        });
+
+        async function loadDashboard() {
+            await Promise.all([
+                loadWallet(),
+                loadClaims(),
+                loadStats()
+            ]);
+        }
+
+        async function loadWallet() {
+            try {
+                const response = await fetch(`${API_BASE}/api/circle/accounts/patient/default`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.account) {
+                        const account = data.account;
+                        
+                        // Calculate USDC balance
+                        let balanceAmount = 0;
+                        if (account.balance) {
+                            if (Array.isArray(account.balance)) {
+                                const usdcBalance = account.balance.find(b => 
+                                    (b.token && b.token.symbol === 'USDC') || 
+                                    (b.symbol === 'USDC') ||
+                                    (b.currency === 'USDC')
+                                );
+                                if (usdcBalance) {
+                                    balanceAmount = parseFloat(usdcBalance.amount || usdcBalance.balance || 0);
+                                }
+                            } else if (account.balance.tokenBalances && Array.isArray(account.balance.tokenBalances)) {
+                                const usdcBalance = account.balance.tokenBalances.find(b => 
+                                    (b.token && b.token.symbol === 'USDC') || 
+                                    (b.symbol === 'USDC')
+                                );
+                                if (usdcBalance) {
+                                    balanceAmount = parseFloat(usdcBalance.amount || usdcBalance.balance || 0);
+                                }
+                            }
+                        }
+
+                        // Update UI
+                        document.getElementById('walletBalance').textContent = `$${balanceAmount.toFixed(2)}`;
+                        document.getElementById('walletBalanceAmount').textContent = `$${balanceAmount.toFixed(2)}`;
+                        document.getElementById('walletId').textContent = account.circle_wallet_id 
+                            ? account.circle_wallet_id.substring(0, 20) + '...' 
+                            : 'Not available';
+                        document.getElementById('walletStatus').textContent = account.status || 'Active';
+                    } else {
+                        showError('Wallet not found. Please contact support.');
+                    }
+                } else if (response.status === 404) {
+                    // Wallet doesn't exist - create it
+                    await createPatientWallet();
+                } else {
+                    throw new Error('Failed to load wallet');
+                }
+            } catch (error) {
+                console.error('Error loading wallet:', error);
+                showError(`Failed to load wallet: ${error.message}`);
+            }
+        }
+
+        async function createPatientWallet() {
+            try {
+                const response = await fetch(`${API_BASE}/api/circle/wallets`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        entityType: 'patient',
+                        entityId: 'default',
+                        description: 'Patient Wallet'
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    console.log('Patient wallet created successfully');
+                    return true;
+                } else {
+                    throw new Error(data.error || 'Failed to create wallet');
+                }
+            } catch (error) {
+                console.error('Error creating wallet:', error);
+                showError(`Failed to create wallet: ${error.message}`);
+                return false;
+            }
+        }
+
+        async function loadClaims() {
+            try {
+                // Get patient's claims
+                // For now, we'll get all claims and filter by patient
+                // In production, you'd have a patient ID from the session
+                const response = await fetch(`${API_BASE}/api/claims`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const claims = data.claims || [];
+                    
+                    // Filter claims for this patient (using patient_id or patient email)
+                    // For demo, show all claims or filter by patient_id if available
+                    const patientClaims = claims.slice(0, 5); // Show first 5 for now
+                    
+                    displayClaims(patientClaims);
+                } else {
+                    throw new Error('Failed to load claims');
+                }
+            } catch (error) {
+                console.error('Error loading claims:', error);
+                document.getElementById('claimsList').innerHTML = `
+                    <div class="empty-state">
+                        No claims found
+                    </div>
+                `;
+            }
+        }
+
+        function displayClaims(claims) {
+            const container = document.getElementById('claimsList');
+            
+            if (claims.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        No claims yet
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <ul class="claims-list">
+                    ${claims.map(claim => {
+                        const date = new Date(claim.created_at || claim.submitted_at).toLocaleDateString();
+                        const amount = claim.total_amount || 0;
+                        const status = claim.status || 'pending';
+                        const statusClass = status === 'approved' ? 'approved' : status === 'paid' ? 'paid' : 'pending';
+                        
+                        return `
+                            <li class="claim-item">
+                                <div class="claim-info">
+                                    <div class="claim-date">${date}</div>
+                                    <div class="claim-amount">$${amount.toFixed(2)}</div>
+                                </div>
+                                <span class="claim-status ${statusClass}">${status}</span>
+                            </li>
+                        `;
+                    }).join('')}
+                </ul>
+            `;
+        }
+
+        async function loadStats() {
+            try {
+                // Load wallet balance (already loaded)
+                const walletResponse = await fetch(`${API_BASE}/api/circle/accounts/patient/default`);
+                if (walletResponse.ok) {
+                    const walletData = await walletResponse.json();
+                    if (walletData.success && walletData.account && walletData.account.balance) {
+                        let balance = 0;
+                        if (Array.isArray(walletData.account.balance)) {
+                            const usdc = walletData.account.balance.find(b => 
+                                (b.token && b.token.symbol === 'USDC') || (b.symbol === 'USDC')
+                            );
+                            if (usdc) balance = parseFloat(usdc.amount || 0);
+                        }
+                        document.getElementById('walletBalance').textContent = `$${balance.toFixed(2)}`;
+                    }
+                }
+
+                // Load claims count
+                const claimsResponse = await fetch(`${API_BASE}/api/claims`);
+                if (claimsResponse.ok) {
+                    const claimsData = await claimsResponse.json();
+                    const claims = claimsData.claims || [];
+                    const pending = claims.filter(c => c.status === 'pending' || c.status === 'pending_approval').length;
+                    const total = claims.reduce((sum, c) => sum + (c.total_amount || 0), 0);
+                    
+                    document.getElementById('pendingClaims').textContent = pending;
+                    document.getElementById('totalBills').textContent = `$${total.toFixed(2)}`;
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function refreshWallet() {
+            await loadWallet();
+            await loadStats();
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+            setTimeout(() => {
+                errorEl.style.display = 'none';
+            }, 5000);
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = '../login.html';
+        }
+    </script>
+</body>
+
+</html>
+
