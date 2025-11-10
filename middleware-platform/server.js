@@ -35,7 +35,21 @@ const PatientPortalService = require('./services/patient-portal-service');
 const EHRAggregatorService = require('./services/ehr-aggregator-service');
 const EHRSyncService = require('./services/ehr-sync-service');
 const EpicAdapter = require('./services/epic-adapter');
-const CircleService = require('./services/circle-service');
+
+// CircleService - make it optional (don't crash if CIRCLE_API_KEY is not set)
+let CircleService;
+try {
+  CircleService = require('./services/circle-service');
+  // Try to instantiate to check if it's configured
+  const circleServiceInstance = new CircleService();
+  if (!circleServiceInstance.isAvailable()) {
+    console.warn('⚠️  Circle service is not fully configured. Wallet features will be limited.');
+  }
+} catch (error) {
+  console.warn('⚠️  Circle service not available:', error.message);
+  console.warn('   Server will continue without Circle wallet features.');
+  CircleService = null;
+}
 
 // Make Twilio optional - only initialize if configured
 let twilio = null;

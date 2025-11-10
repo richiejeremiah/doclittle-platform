@@ -7,6 +7,7 @@
  */
 
 const { v4: uuidv4 } = require('uuid');
+const db = require('../database');
 
 let CircleSDK;
 try {
@@ -22,14 +23,20 @@ class CircleService {
         // Circle API keys should be in format: ENVIRONMENT:ID:SECRET (e.g., TEST_API_KEY:id:secret)
         // Get your API key from: https://console.circle.com/
         this.apiKey = process.env.CIRCLE_API_KEY || null;
-        if (!this.apiKey) {
-            throw new Error('CIRCLE_API_KEY environment variable is required. Get your key from https://console.circle.com/');
-        }
-        // Entity Secret must be generated and registered using the SDK first
-        // Run: node scripts/setup-circle-entity-secret.js
         this.entitySecret = process.env.CIRCLE_ENTITY_SECRET || process.env.ENTITY_SECRET || null;
         this.baseURL = process.env.CIRCLE_BASE_URL || 'https://api-sandbox.circle.com';
         this.environment = process.env.CIRCLE_ENVIRONMENT || 'sandbox';
+        
+        // Initialize Circle SDK client if available
+        this.client = null;
+        
+        // Check if Circle is configured
+        if (!this.apiKey) {
+            console.warn('⚠️  CIRCLE_API_KEY not set. Circle wallet features will be disabled.');
+            console.warn('   To enable Circle wallets, set CIRCLE_API_KEY in environment variables.');
+            console.warn('   Get your key from: https://console.circle.com/');
+            return; // Exit early - service will be unavailable
+        }
         
         // Check if API key is in correct format (3 parts: ENV:ID:SECRET)
         const keyParts = this.apiKey.split(':');
@@ -39,13 +46,14 @@ class CircleService {
             this.apiKey = `TEST_API_KEY:${this.apiKey}`;
         } else if (keyParts.length !== 3) {
             console.error('❌ Invalid API key format. Expected format: ENVIRONMENT:ID:SECRET or ID:SECRET');
+            console.warn('⚠️  Circle service will be unavailable due to invalid API key format.');
+            return; // Exit early - service will be unavailable
         }
         
         console.log(`🔑 Using Circle API Key format: ${this.apiKey.split(':').length} parts`);
         console.log(`🌐 Circle API Base URL: ${this.baseURL}`);
         
         // Initialize Circle SDK client if available
-        this.client = null;
         if (CircleSDK) {
             try {
                 // Initialize the Circle SDK client
@@ -64,9 +72,11 @@ class CircleService {
                 }
             } catch (error) {
                 console.error('❌ Error initializing Circle SDK:', error.message);
+                console.warn('⚠️  Circle service will be unavailable.');
             }
         } else {
             console.warn('⚠️  Circle SDK not available. Install with: npm install @circle-fin/developer-controlled-wallets');
+            console.warn('⚠️  Circle service will be unavailable.');
         }
     }
 
@@ -74,7 +84,7 @@ class CircleService {
      * Check if SDK is available and configured
      */
     isAvailable() {
-        return this.client !== null && this.entitySecret !== null;
+        return this.apiKey !== null && this.client !== null && this.entitySecret !== null;
     }
 
     /**
@@ -550,22 +560,199 @@ class CircleService {
 
     /**
      * Verify webhook signature
-     * @param {string} signature - Webhook signature from headers
-     * @param {string} payload - Webhook payload
+     * Circle uses HMAC SHA256 with the webhook secret
+     * @param {string} signature - Webhook signature from headers (X-Circle-Signature)
+     * @param {string|Buffer} payload - Raw webhook payload body
      * @returns {boolean} Whether signature is valid
      */
     verifyWebhookSignature(signature, payload) {
-        // Implement webhook signature verification
-        // This depends on Circle's webhook signature algorithm
         const webhookSecret = process.env.CIRCLE_WEBHOOK_SECRET;
+        
         if (!webhookSecret) {
-            console.warn('⚠️  Webhook secret not configured');
-            return true; // Allow in development, require in production
+            if (process.env.NODE_ENV === 'production') {
+                console.error('❌ CIRCLE_WEBHOOK_SECRET not configured in production!');
+                return false;
+            }
+            console.warn('⚠️  Webhook secret not configured - allowing in development');
+            return true;
         }
 
-        // TODO: Implement actual signature verification based on Circle's method
-        // This is a placeholder - check Circle documentation for exact implementation
-        return true;
+        if (!signature) {
+            console.error('❌ Webhook signature missing');
+            return false;
+        }
+
+        try {
+            const crypto = require('crypto');
+            
+            // Circle sends signature as: "v1=signature" format
+            // Extract the signature value
+            const signatureMatch = signature.match(/v1=([a-f0-9]+)/);
+            if (!signatureMatch) {
+                console.error('❌ Invalid signature format');
+                return false;
+            }
+            
+            const receivedSignature = signatureMatch[1];
+            
+            // Calculate expected signature
+            const expectedSignature = crypto
+                .createHmac('sha256', webhookSecret)
+                .update(payload)
+                .digest('hex');
+            
+            // Use timing-safe comparison to prevent timing attacks
+            const isValid = crypto.timingSafeEqual(
+                Buffer.from(receivedSignature, 'hex'),
+                Buffer.from(expectedSignature, 'hex')
+            );
+            
+            if (!isValid) {
+                console.error('❌ Webhook signature verification failed');
+            }
+            
+            return isValid;
+        } catch (error) {
+            console.error('❌ Error verifying webhook signature:', error.message);
+            return false;
+        }
+    }
+
+    /**
+     * Get or create a patient wallet linked to FHIR Patient resource_id
+     * @param {string} fhirPatientResourceId - FHIR Patient resource_id (e.g., 'patient-xxx')
+     * @param {Object} options - Optional parameters
+     * @param {boolean} options.createIfNotExists - Create wallet if it doesn't exist (default: true)
+     * @returns {Promise<Object>} Wallet account information
+     */
+    async getOrCreatePatientWallet(fhirPatientResourceId, options = {}) {
+        const { createIfNotExists = true } = options;
+
+        try {
+            // Check if wallet already exists for this FHIR Patient resource_id
+            const existingAccount = db.getCircleAccountByEntity('patient', fhirPatientResourceId);
+            if (existingAccount) {
+                return {
+                    success: true,
+                    account: existingAccount,
+                    walletId: existingAccount.circle_wallet_id,
+                    message: 'Wallet already exists'
+                };
+            }
+
+            // If wallet doesn't exist and we shouldn't create it, return error
+            if (!createIfNotExists) {
+                return {
+                    success: false,
+                    error: 'Patient wallet does not exist'
+                };
+            }
+
+            // Verify FHIR Patient exists
+            const fhirPatient = db.getFHIRPatient(fhirPatientResourceId);
+            if (!fhirPatient) {
+                return {
+                    success: false,
+                    error: `FHIR Patient with resource_id ${fhirPatientResourceId} not found`
+                };
+            }
+
+            // Get or create wallet set
+            let walletSetId = process.env.CIRCLE_WALLET_SET_ID;
+            if (!walletSetId) {
+                const walletSetResult = await this.createWalletSet({
+                    name: 'Healthcare Billing Wallets',
+                    description: 'Wallet set for Provider, Insurer, and Patient accounts'
+                });
+
+                if (!walletSetResult.success) {
+                    return {
+                        success: false,
+                        error: `Failed to create wallet set: ${walletSetResult.error}`
+                    };
+                }
+
+                walletSetId = walletSetResult.walletSetId;
+                process.env.CIRCLE_WALLET_SET_ID = walletSetId;
+            }
+
+            // Create wallet using FHIR Patient resource_id as entity_id
+            const walletResult = await this.createWallet({
+                walletSetId: walletSetId,
+                entityType: 'patient',
+                entityId: fhirPatientResourceId, // Use FHIR Patient resource_id
+                description: `Patient wallet for FHIR Patient ${fhirPatientResourceId}`
+            });
+
+            if (!walletResult.success) {
+                return {
+                    success: false,
+                    error: walletResult.error || 'Failed to create wallet'
+                };
+            }
+
+            // Store wallet in database
+            const accountId = `circle-account-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            db.createCircleAccount({
+                id: accountId,
+                entity_type: 'patient',
+                entity_id: fhirPatientResourceId, // Link to FHIR Patient resource_id
+                circle_wallet_id: walletResult.walletId,
+                currency: 'USDC',
+                status: 'active'
+            });
+
+            const account = db.getCircleAccountByEntity('patient', fhirPatientResourceId);
+
+            return {
+                success: true,
+                account: account,
+                walletId: walletResult.walletId,
+                walletData: walletResult.walletData,
+                message: 'Wallet created successfully'
+            };
+        } catch (error) {
+            console.error('❌ Error in getOrCreatePatientWallet:', error);
+            return {
+                success: false,
+                error: error.message || 'Failed to get or create patient wallet'
+            };
+        }
+    }
+
+    /**
+     * Get patient wallet by phone number or email (looks up FHIR Patient first)
+     * @param {string} phone - Patient phone number (optional)
+     * @param {string} email - Patient email (optional)
+     * @returns {Promise<Object>} Wallet account information
+     */
+    async getPatientWalletByContact(phone, email) {
+        try {
+            // Look up FHIR Patient by phone or email
+            let fhirPatient = null;
+            if (phone) {
+                fhirPatient = db.getFHIRPatientByPhone(phone);
+            }
+            if (!fhirPatient && email) {
+                fhirPatient = db.getFHIRPatientByEmail(email);
+            }
+
+            if (!fhirPatient) {
+                return {
+                    success: false,
+                    error: 'FHIR Patient not found for provided phone/email'
+                };
+            }
+
+            // Get or create wallet using FHIR Patient resource_id
+            return await this.getOrCreatePatientWallet(fhirPatient.resource_id);
+        } catch (error) {
+            console.error('❌ Error in getPatientWalletByContact:', error);
+            return {
+                success: false,
+                error: error.message || 'Failed to get patient wallet by contact'
+            };
+        }
     }
 }
 
