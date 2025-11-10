@@ -114,6 +114,8 @@ db.exec(`
     merchant_order_id TEXT,
     fhir_patient_id TEXT,
     fhir_encounter_id TEXT,
+    appointment_id TEXT,
+    payment_method TEXT DEFAULT NULL,
     status TEXT DEFAULT 'pending',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     completed_at DATETIME,
@@ -992,8 +994,8 @@ module.exports = {
     return db.prepare(`
       INSERT INTO voice_checkouts 
       (id, merchant_id, product_id, product_name, quantity, amount, 
-       customer_phone, customer_name, customer_email, appointment_id, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       customer_phone, customer_name, customer_email, appointment_id, payment_method, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       checkout.id,
       checkout.merchant_id,
@@ -1005,6 +1007,7 @@ module.exports = {
       checkout.customer_name || null,
       checkout.customer_email || null,
       checkout.appointment_id || null,
+      checkout.payment_method || null,
       checkout.status || 'pending'
     );
   },
@@ -1044,6 +1047,10 @@ module.exports = {
     if (updates.appointment_id !== undefined) {
       fields.push('appointment_id = ?');
       values.push(updates.appointment_id);
+    }
+    if (updates.payment_method) {
+      fields.push('payment_method = ?');
+      values.push(updates.payment_method);
     }
     if (updates.status === 'completed') {
       fields.push('completed_at = CURRENT_TIMESTAMP');
@@ -1366,6 +1373,17 @@ module.exports = {
   getFHIRPatientByPhone(phone) {
     const stmt = db.prepare('SELECT * FROM fhir_patients WHERE phone = ? AND is_deleted = 0 ORDER BY created_at DESC LIMIT 1');
     const row = stmt.get(phone);
+    if (!row) return null;
+    return {
+      ...row,
+      resource_data: JSON.parse(row.resource_data)
+    };
+  },
+
+  // Get FHIR Patient by Email
+  getFHIRPatientByEmail(email) {
+    const stmt = db.prepare('SELECT * FROM fhir_patients WHERE email = ? AND is_deleted = 0 ORDER BY created_at DESC LIMIT 1');
+    const row = stmt.get(email);
     if (!row) return null;
     return {
       ...row,

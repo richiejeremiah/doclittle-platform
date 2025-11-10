@@ -148,11 +148,17 @@ GOOGLE_CALENDAR_ID=your_calendar_id
 GOOGLE_CLIENT_EMAIL=your_service_account_email
 GOOGLE_PRIVATE_KEY=your_private_key
 
-# Email (Nodemailer)
+# Email (SMTP or Azure Communication Services)
+# Option 1: SMTP (Gmail, SendGrid, Mailgun, etc.)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your_email
 SMTP_PASS=your_password
+SMTP_FROM=noreply@doclittle.health
+
+# Option 2: Azure Communication Services Email
+AZURE_COMMUNICATION_CONNECTION_STRING=endpoint=https://your-resource.communication.azure.com/;accesskey=your-access-key
+AZURE_EMAIL_SENDER=DoNotReply@your-domain.com
 
 # Twilio (SMS)
 TWILIO_ACCOUNT_SID=your_twilio_sid
@@ -165,8 +171,24 @@ GROQ_API_KEY=your_groq_api_key
 EPIC_CLIENT_ID=your_epic_client_id
 EPIC_REDIRECT_URI=your_redirect_uri
 
-# Base URL
-BASE_URL=https://your-domain.com
+# Base URL (for production)
+API_BASE_URL=https://doclittle.site
+BASE_URL=https://doclittle.site
+# Note: API_BASE_URL takes priority over BASE_URL
+# For local development, these can be omitted (defaults to localhost)
+
+# Mastercard Agent Pay (optional)
+MASTERCARD_API_KEY=your_mastercard_api_key
+MASTERCARD_API_SECRET=your_mastercard_api_secret
+MASTERCARD_MERCHANT_ID=your_merchant_id
+
+# Visa Agent Toolkit (optional)
+VISA_API_KEY=your_visa_api_key
+VISA_API_SECRET=your_visa_api_secret
+VISA_MERCHANT_ID=your_merchant_id
+
+# Circle Webhook (optional)
+CIRCLE_WEBHOOK_SECRET=your_circle_webhook_secret
 ```
 
 ---
@@ -373,10 +395,18 @@ node tests/test-comprehensive-system.js
 
 ### Data Security
 
+- ✅ **Rate Limiting**: Protects against DDoS and abuse
+  - General API: 100 requests/15min per IP
+  - Authentication: 5 attempts/15min per IP
+  - Payment: 10 requests/hour per IP
+  - Voice: 20 requests/minute per IP
+- ✅ **Security Headers**: Helmet.js integration (CSP, XSS protection)
+- ✅ **Input Sanitization**: Automatic sanitization of all inputs
+- ✅ **Request Logging**: Structured logging for all requests
+- ✅ **Webhook Verification**: Circle webhook signature verification
+- ✅ **API Authentication**: API key support (optional)
 - Database encryption at rest
-- Secure API authentication
-- Input validation and sanitization
-- SQL injection prevention
+- SQL injection prevention (prepared statements)
 - CORS configuration
 
 ---
@@ -520,6 +550,21 @@ curl "http://localhost:4000/api/patient/benefits?memberId=CIGNA901234&patientNam
 
 ---
 
+## 📚 Documentation
+
+All documentation has been organized in the [`docs/`](./docs/) folder:
+
+### Quick Links
+- **Setup Guides**: [Domain Setup](./docs/setup/DOMAIN_SETUP_GUIDE.md), [Environment Variables](./docs/setup/ENV_SETUP.md)
+- **Architecture**: [Vision](./docs/architecture/VISION.md), [Payment Architecture](./docs/architecture/PAYMENT_ARCHITECTURE.md)
+- **API**: [API Documentation](./docs/api/API_DOCUMENTATION.md)
+- **Deployment**: [Security](./docs/deployment/SECURITY_IMPROVEMENTS.md), [Backup Strategy](./docs/deployment/BACKUP_STRATEGY.md)
+- **Voice Agent**: [Kelly's Prompt](./docs/voice-agent/kelly-voice-agent-prompt.md)
+
+See [`docs/README.md`](./docs/README.md) for a complete index of all documentation.
+
+---
+
 ## 📝 License
 
 MIT License
@@ -530,9 +575,9 @@ MIT License
 
 For issues and questions:
 1. Check the troubleshooting section
-2. Review API endpoint documentation
+2. Review API endpoint documentation in [`docs/api/`](./docs/api/)
 3. Check server logs for error details
-4. Verify environment variables are configured correctly
+4. Verify environment variables are configured correctly (see [`docs/setup/ENV_SETUP.md`](./docs/setup/ENV_SETUP.md))
 
 ---
 

@@ -66,6 +66,11 @@ class FHIRService {
       db.createFHIRPatient(patientResource);
 
       console.log(`[FHIR] Created new patient: ${patientResource.id}`);
+      
+      // Optionally create Circle wallet for patient (can be done on-demand later)
+      // Wallet will be created when needed via /api/circle/wallets endpoint
+      // with entityType='patient' and entityId=patientResource.id
+      
       return patientResource;
     } catch (error) {
       console.error('[FHIR] Error in getOrCreatePatient:', error);

@@ -1,7 +1,9 @@
 /**
  * EMAIL SERVICE
- * Sends emails via SMTP (nodemailer)
- * Falls back to console logging if SMTP not configured
+ * Supports multiple email providers:
+ * - SMTP (Gmail, SendGrid, Mailgun, etc.)
+ * - Azure Communication Services Email (via SMTP or SDK)
+ * Falls back to console logging if not configured
  */
 
 let nodemailer;
@@ -13,9 +15,43 @@ try {
   nodemailer = null;
 }
 
+let azureEmailClient;
+try {
+  const { EmailClient } = require('@azure/communication-email');
+  azureEmailClient = EmailClient;
+} catch (e) {
+  // Azure SDK not installed - will use SMTP if configured
+  azureEmailClient = null;
+}
+
 class EmailService {
   /**
-   * Get email transporter
+   * Check if Azure Communication Services is configured
+   */
+  static isAzureConfigured() {
+    return !!(process.env.AZURE_COMMUNICATION_CONNECTION_STRING && azureEmailClient);
+  }
+
+  /**
+   * Get Azure Email Client
+   */
+  static getAzureClient() {
+    if (!this.isAzureConfigured()) {
+      return null;
+    }
+
+    try {
+      return azureEmailClient.fromConnectionString(
+        process.env.AZURE_COMMUNICATION_CONNECTION_STRING
+      );
+    } catch (error) {
+      console.error('❌ Error initializing Azure Email Client:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Get email transporter (SMTP)
    * Returns null if credentials not configured
    */
   static getTransporter() {
@@ -31,8 +67,7 @@ class EmailService {
     }
 
     if (!smtpHost || !smtpUser || !smtpPassword) {
-      console.warn('⚠️  SMTP credentials not configured - emails will be logged to console');
-      return null;
+      return null; // Silent return - will check Azure next
     }
 
     return nodemailer.createTransport({
@@ -47,7 +82,45 @@ class EmailService {
   }
 
   /**
+   * Send email via Azure Communication Services
+   * @private
+   */
+  static async _sendViaAzure({ to, subject, html, text }) {
+    try {
+      const client = this.getAzureClient();
+      if (!client) {
+        return null;
+      }
+
+      const senderAddress = process.env.AZURE_EMAIL_SENDER || process.env.SMTP_FROM || 'DoNotReply@azurecomm.net';
+      
+      const message = {
+        content: {
+          subject: subject,
+          plainText: text || html.replace(/<[^>]*>/g, ''),
+          html: html
+        },
+        recipients: {
+          to: [{ address: to }]
+        },
+        senderAddress: senderAddress
+      };
+
+      const poller = await client.beginSend(message);
+      const result = await poller.pollUntilDone();
+
+      console.log('📧 Email sent via Azure:', result.id);
+      return { success: true, message_id: result.id, provider: 'azure' };
+
+    } catch (error) {
+      console.error('❌ Azure email send error:', error.message);
+      return { success: false, error: error.message, provider: 'azure' };
+    }
+  }
+
+  /**
    * Send email
+   * Supports both Azure Communication Services and SMTP
    * @param {Object} options - Email options
    * @param {string} options.to - Recipient email
    * @param {string} options.subject - Email subject
@@ -56,31 +129,42 @@ class EmailService {
    */
   static async sendEmail({ to, subject, html, text }) {
     try {
-      const transporter = this.getTransporter();
-      const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@doclittle.health';
-
-      // If no transporter, log to console
-      if (!transporter) {
-        console.log('\n📧 EMAIL (SIMULATED):');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log(`From: ${from}`);
-        console.log(`To: ${to}`);
-        console.log(`Subject: ${subject}`);
-        console.log(`Body:\n${text || html}`);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-        return { success: true, message_id: 'simulated' };
+      // Try Azure first if configured
+      if (this.isAzureConfigured()) {
+        const azureResult = await this._sendViaAzure({ to, subject, html, text });
+        if (azureResult && azureResult.success) {
+          return azureResult;
+        }
+        // If Azure fails, fall back to SMTP
+        console.warn('⚠️  Azure email failed, falling back to SMTP');
       }
 
-      const info = await transporter.sendMail({
-        from: from,
-        to: to,
-        subject: subject,
-        html: html,
-        text: text || html.replace(/<[^>]*>/g, '')
-      });
+      // Try SMTP
+      const transporter = this.getTransporter();
+      const from = process.env.SMTP_FROM || process.env.SMTP_USER || process.env.AZURE_EMAIL_SENDER || 'noreply@doclittle.health';
 
-      console.log('📧 Email sent:', info.messageId);
-      return { success: true, message_id: info.messageId };
+      if (transporter) {
+        const info = await transporter.sendMail({
+          from: from,
+          to: to,
+          subject: subject,
+          html: html,
+          text: text || html.replace(/<[^>]*>/g, '')
+        });
+
+        console.log('📧 Email sent via SMTP:', info.messageId);
+        return { success: true, message_id: info.messageId, provider: 'smtp' };
+      }
+
+      // If no email service configured, log to console
+      console.log('\n📧 EMAIL (SIMULATED):');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`From: ${from}`);
+      console.log(`To: ${to}`);
+      console.log(`Subject: ${subject}`);
+      console.log(`Body:\n${text || html}`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      return { success: true, message_id: 'simulated', provider: 'console' };
 
     } catch (error) {
       console.error('❌ Email send error:', error.message);

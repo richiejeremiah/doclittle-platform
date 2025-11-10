@@ -1,0 +1,986 @@
+openapi: 3.0.3
+info:
+  title: Agentic Commerce Platform API
+  description: |
+    Middleware platform that enables AI agents (ChatGPT, Google, Voice) to process payments.
+    Acts as "Plaid for AI Agents" - connecting agent platforms to payment processing.
+    
+    **Key Features:**
+    - Multi-platform support (ACP, AP2, Voice)
+    - Multiple payment methods (Stripe, Circle USDC, Mastercard, Visa)
+    - Fraud detection and security
+    - Healthcare integration (FHIR, insurance, EHR)
+  version: 3.0.0
+  contact:
+    name: API Support
+    email: support@doclittle.health
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://web-production-a783d.up.railway.app
+    description: Production server
+  - url: http://localhost:4000
+    description: Local development server
+
+tags:
+  - name: Voice Agent
+    description: Voice agent endpoints (Retell, VAPI, etc.)
+  - name: ACP
+    description: Agentic Commerce Protocol (ChatGPT)
+  - name: AP2
+    description: Agent Payments Protocol (Google)
+  - name: Payment
+    description: Payment processing endpoints
+  - name: Merchant
+    description: Merchant registration and product management
+  - name: Admin
+    description: Admin dashboard and analytics
+  - name: Patient Portal
+    description: Patient self-service endpoints
+  - name: Circle
+    description: Circle USDC wallet and payment endpoints
+  - name: FHIR
+    description: FHIR R4 compliant healthcare endpoints
+  - name: Fraud
+    description: Fraud detection and monitoring
+  - name: Insurance
+    description: Insurance verification and claims
+
+security:
+  - ApiKeyAuth: []
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication (optional for public endpoints)
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Error message here"
+    
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Operation successful"
+    
+    PaymentRequest:
+      type: object
+      required:
+        - merchant_id
+        - customer
+        - items
+        - totals
+      properties:
+        transaction_id:
+          type: string
+          example: "tx_abc123"
+        merchant_id:
+          type: string
+          example: "merchant_123"
+        customer:
+          type: object
+          properties:
+            name:
+              type: string
+              example: "John Doe"
+            phone:
+              type: string
+              example: "+1234567890"
+            email:
+              type: string
+              example: "john@example.com"
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              product_id:
+                type: string
+              name:
+                type: string
+              price:
+                type: number
+              quantity:
+                type: integer
+        totals:
+          type: object
+          properties:
+            subtotal:
+              type: number
+            tax:
+              type: number
+            shipping:
+              type: number
+            total:
+              type: number
+        payment:
+          type: object
+          properties:
+            method:
+              type: string
+              enum: [stripe, link, mastercard, visa, circle]
+            currency:
+              type: string
+              default: USD
+    
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "appt_123"
+        patient_name:
+          type: string
+        patient_phone:
+          type: string
+        patient_email:
+          type: string
+        date:
+          type: string
+          format: date
+        time:
+          type: string
+          example: "14:00"
+        appointment_type:
+          type: string
+        status:
+          type: string
+          enum: [scheduled, confirmed, cancelled, completed]
+
+paths:
+  # ==========================================
+  # Voice Agent Endpoints
+  # ==========================================
+  /voice/incoming:
+    post:
+      tags: [Voice Agent]
+      summary: Handle incoming voice call
+      description: Webhook endpoint for voice agent platforms (Retell, VAPI)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /voice/appointments/schedule:
+    post:
+      tags: [Voice Agent]
+      summary: Schedule appointment via voice
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - patient_name
+                - patient_phone
+                - date
+                - time
+              properties:
+                patient_name:
+                  type: string
+                patient_phone:
+                  type: string
+                patient_email:
+                  type: string
+                date:
+                  type: string
+                  format: date
+                time:
+                  type: string
+                appointment_type:
+                  type: string
+      responses:
+        '200':
+          description: Appointment scheduled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  appointment:
+                    $ref: '#/components/schemas/Appointment'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /voice/appointments/available-slots:
+    post:
+      tags: [Voice Agent]
+      summary: Get available appointment slots
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: Available slots
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  slots:
+                    type: array
+                    items:
+                      type: string
+
+  /voice/appointments/checkout:
+    post:
+      tags: [Voice Agent, Payment]
+      summary: Create checkout for appointment
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - appointment_id
+              properties:
+                appointment_id:
+                  type: string
+                patient_phone:
+                  type: string
+                patient_email:
+                  type: string
+      responses:
+        '200':
+          description: Checkout created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  checkout_id:
+                    type: string
+                  amount:
+                    type: number
+                  payment_token:
+                    type: string
+                  requires_verification:
+                    type: boolean
+                  email_sent:
+                    type: boolean
+
+  /voice/checkout/verify:
+    post:
+      tags: [Voice Agent, Payment]
+      summary: Verify email code and get payment link
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - payment_token
+                - verification_code
+              properties:
+                payment_token:
+                  type: string
+                verification_code:
+                  type: string
+      responses:
+        '200':
+          description: Verification successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  payment_link:
+                    type: string
+                  payment_link_sent:
+                    type: boolean
+
+  # ==========================================
+  # ACP (ChatGPT) Endpoints
+  # ==========================================
+  /acp/products:
+    get:
+      tags: [ACP]
+      summary: Get product feed for ChatGPT
+      security: []
+      parameters:
+        - name: merchant_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: query
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product feed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      type: object
+
+  /acp/checkout:
+    post:
+      tags: [ACP, Payment]
+      summary: Create checkout session for ChatGPT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - merchant_id
+                - session_id
+                - items
+      responses:
+        '200':
+          description: Checkout created
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # ==========================================
+  # AP2 (Google) Endpoints
+  # ==========================================
+  /ap2/products:
+    get:
+      tags: [AP2]
+      summary: Search products for Google Agent
+      security: []
+      parameters:
+        - name: merchant_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: intent_mandate
+          in: query
+          schema:
+            type: string
+            description: JSON-encoded intent mandate
+      responses:
+        '200':
+          description: Products found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      type: object
+
+  /ap2/cart:
+    post:
+      tags: [AP2]
+      summary: Create or update cart
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Cart created/updated
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /ap2/payment:
+    post:
+      tags: [AP2, Payment]
+      summary: Process payment with AP2 mandate
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Payment processed
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # ==========================================
+  # Payment Endpoints
+  # ==========================================
+  /api/payment/checkout/{token}:
+    get:
+      tags: [Payment]
+      summary: Get checkout details by token
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Checkout details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  checkout:
+                    type: object
+                  stripe_publishable_key:
+                    type: string
+
+  /api/payment/process:
+    post:
+      tags: [Payment]
+      summary: Process payment with Stripe
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - payment_token
+              properties:
+                payment_token:
+                  type: string
+                payment_method_id:
+                  type: string
+                amount:
+                  type: number
+                currency:
+                  type: string
+                  default: usd
+      responses:
+        '200':
+          description: Payment processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  payment_intent_id:
+                    type: string
+                  status:
+                    type: string
+
+  /payment/{token}:
+    get:
+      tags: [Payment]
+      summary: Serve payment page
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment page HTML
+          content:
+            text/html:
+              schema:
+                type: string
+
+  # ==========================================
+  # Merchant Endpoints
+  # ==========================================
+  /api/merchant/register:
+    post:
+      tags: [Merchant]
+      summary: Register a new merchant
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - api_url
+              properties:
+                name:
+                  type: string
+                api_url:
+                  type: string
+                webhook_url:
+                  type: string
+                enabled_platforms:
+                  type: array
+                  items:
+                    type: string
+                    enum: [acp, ap2]
+      responses:
+        '200':
+          description: Merchant registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  merchant:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      api_key:
+                        type: string
+
+  /api/merchant/sync-products:
+    post:
+      tags: [Merchant]
+      summary: Sync products from merchant API
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - merchant_id
+              properties:
+                merchant_id:
+                  type: string
+                platforms:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Products synced
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  # ==========================================
+  # Admin Endpoints
+  # ==========================================
+  /api/admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Get dashboard overview
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  merchants:
+                    type: array
+                  transactions:
+                    type: array
+                  revenue:
+                    type: object
+
+  /api/admin/appointments:
+    get:
+      tags: [Admin]
+      summary: Get all appointments
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Appointments list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  appointments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Appointment'
+
+  # ==========================================
+  # Patient Portal Endpoints
+  # ==========================================
+  /api/patient/verify/send:
+    post:
+      tags: [Patient Portal]
+      summary: Send verification code to patient
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+              properties:
+                phone:
+                  type: string
+      responses:
+        '200':
+          description: Verification code sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /api/patient/verify/confirm:
+    post:
+      tags: [Patient Portal]
+      summary: Confirm verification code
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+                - code
+              properties:
+                phone:
+                  type: string
+                code:
+                  type: string
+      responses:
+        '200':
+          description: Verification confirmed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  session_id:
+                    type: string
+
+  /api/patient/appointments:
+    get:
+      tags: [Patient Portal]
+      summary: Get patient appointments
+      security: []
+      parameters:
+        - name: session_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Patient appointments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  appointments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Appointment'
+
+  # ==========================================
+  # Circle USDC Endpoints
+  # ==========================================
+  /api/circle/wallets:
+    post:
+      tags: [Circle]
+      summary: Create Circle wallet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - entityType
+                - entityId
+              properties:
+                entityType:
+                  type: string
+                  enum: [patient, provider, insurer]
+                entityId:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Wallet created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  wallet:
+                    type: object
+
+  /api/circle/accounts/{entityType}/{entityId}:
+    get:
+      tags: [Circle]
+      summary: Get wallet balance
+      parameters:
+        - name: entityType
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [patient, provider, insurer]
+        - name: entityId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Wallet balance
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  balance:
+                    type: number
+                  currency:
+                    type: string
+
+  # ==========================================
+  # FHIR Endpoints
+  # ==========================================
+  /fhir/Patient:
+    get:
+      tags: [FHIR]
+      summary: Search patients
+      security: []
+      parameters:
+        - name: name
+          in: query
+          schema:
+            type: string
+        - name: phone
+          in: query
+          schema:
+            type: string
+        - name: email
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: FHIR Bundle of patients
+          content:
+            application/fhir+json:
+              schema:
+                type: object
+    post:
+      tags: [FHIR]
+      summary: Create patient
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Patient created
+          content:
+            application/fhir+json:
+              schema:
+                type: object
+
+  /fhir/Patient/{id}:
+    get:
+      tags: [FHIR]
+      summary: Get patient by ID
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Patient resource
+          content:
+            application/fhir+json:
+              schema:
+                type: object
+
+  /fhir/metadata:
+    get:
+      tags: [FHIR]
+      summary: Get FHIR capability statement
+      security: []
+      responses:
+        '200':
+          description: Capability statement
+          content:
+            application/fhir+json:
+              schema:
+                type: object
+
+  # ==========================================
+  # Fraud Detection Endpoints
+  # ==========================================
+  /api/fraud/dashboard:
+    get:
+      tags: [Fraud]
+      summary: Get fraud dashboard
+      parameters:
+        - name: timeframe
+          in: query
+          schema:
+            type: string
+            default: 24h
+      responses:
+        '200':
+          description: Fraud dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  stats:
+                    type: object
+                  high_risk_pending:
+                    type: integer
+                  recent_checks:
+                    type: array
+
+  # ==========================================
+  # Webhooks
+  # ==========================================
+  /webhook/stripe:
+    post:
+      tags: [Payment]
+      summary: Stripe webhook handler
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook processed
+
+  /webhook/circle:
+    post:
+      tags: [Circle]
+      summary: Circle webhook handler
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook processed
+

@@ -18,6 +18,10 @@ yarn-error.log*
 middleware-platform/*.db
 merchant-shop/*.db
 
+# Database backups
+backups/
+middleware-platform/backups/
+
 # Recovery files and secrets
 *recovery*.json
 *recovery*.dat

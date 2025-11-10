@@ -12,9 +12,9 @@ export NVM_DIR="$HOME/.nvm"
 npm start
 
 
-#ngrok
-ngrok http 4000
-# Copy the https URL and update NGROK_URL in .env if it changed
+# For production, server should be deployed to Railway
+# API_BASE_URL=https://doclittle.site should be set in .env
+# No need for ngrok in production
 
 #Killserver: # Find what's using port 4000
 lsof -ti:4000

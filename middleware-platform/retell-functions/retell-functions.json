@@ -1,0 +1,272 @@
+{
+  "functions": [
+    {
+      "type": "function",
+      "name": "collect_insurance",
+      "description": "Collect and verify insurance information. Use when caller wants to check insurance coverage or before booking an appointment.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "member_id": {
+            "type": "string",
+            "description": "Insurance member ID or policy number (required)"
+          },
+          "patient_name": {
+            "type": "string",
+            "description": "Patient's full name"
+          },
+          "patient_phone": {
+            "type": "string",
+            "description": "Patient's phone number (if available from caller ID)"
+          },
+          "patient_email": {
+            "type": "string",
+            "description": "Patient's email address (optional)"
+          },
+          "payer_name": {
+            "type": "string",
+            "description": "Insurance company name (e.g., Cigna, Aetna, Blue Cross) - optional, system will try to find it"
+          },
+          "payer_id": {
+            "type": "string",
+            "description": "Insurance payer ID (if known)"
+          },
+          "service_code": {
+            "type": "string",
+            "description": "CPT code for specific service type (e.g., 90834 for therapy)"
+          }
+        },
+        "required": ["member_id"]
+      }
+    },
+    {
+      "type": "function",
+      "name": "get_available_slots",
+      "description": "Get available appointment time slots for a specific date and appointment type.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Date in YYYY-MM-DD format"
+          },
+          "appointment_type": {
+            "type": "string",
+            "description": "Type of appointment (e.g., Therapy Session - Psychiatry, Primary Care Consultation)"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Timezone (default: America/New_York)"
+          }
+        },
+        "required": ["date"]
+      }
+    },
+    {
+      "type": "function",
+      "name": "schedule_appointment",
+      "description": "Schedule a new appointment after the caller picks a time.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "patient_name": {
+            "type": "string",
+            "description": "Patient's full name (required)"
+          },
+          "patient_phone": {
+            "type": "string",
+            "description": "Patient's phone number (required)"
+          },
+          "patient_email": {
+            "type": "string",
+            "description": "Patient's email address (required for confirmations)"
+          },
+          "appointment_type": {
+            "type": "string",
+            "description": "Type of appointment (e.g., Therapy Session - Psychiatry, Primary Care Consultation)"
+          },
+          "date": {
+            "type": "string",
+            "description": "Date in YYYY-MM-DD format (required)"
+          },
+          "time": {
+            "type": "string",
+            "description": "Time in HH:MM or 12-hour format like '2:00 PM' (required)"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Timezone (default: America/New_York)"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Optional notes about the appointment, insurance information, or patient preferences"
+          }
+        },
+        "required": ["patient_name", "patient_phone", "patient_email", "date", "time"]
+      }
+    },
+    {
+      "type": "function",
+      "name": "search_appointments",
+      "description": "Search for existing appointments by phone number or email. Use when caller asks about an existing booking.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "search_term": {
+            "type": "string",
+            "description": "Phone number or email address to search for"
+          }
+        },
+        "required": ["search_term"]
+      }
+    },
+    {
+      "type": "function",
+      "name": "confirm_appointment",
+      "description": "Confirm an existing appointment.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "appointment_id": {
+            "type": "string",
+            "description": "Appointment ID or confirmation number"
+          }
+        },
+        "required": ["appointment_id"]
+      }
+    },
+    {
+      "type": "function",
+      "name": "cancel_appointment",
+      "description": "Cancel an existing appointment. Ask why and offer reschedule first.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "appointment_id": {
+            "type": "string",
+            "description": "Appointment ID or confirmation number"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Reason for cancellation (optional)"
+          }
+        },
+        "required": ["appointment_id"]
+      }
+    },
+    {
+      "type": "function",
+      "name": "reschedule_appointment",
+      "description": "Reschedule an existing appointment to a new date and time. Check availability before rescheduling.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "appointment_id": {
+            "type": "string",
+            "description": "Appointment ID or confirmation number"
+          },
+          "new_date": {
+            "type": "string",
+            "description": "New date in YYYY-MM-DD format (required)"
+          },
+          "new_time": {
+            "type": "string",
+            "description": "New time in HH:MM or 12-hour format like '2:00 PM' (required)"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Timezone (default: America/New_York)"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Reason for rescheduling (optional)"
+          }
+        },
+        "required": ["appointment_id", "new_date", "new_time"]
+      }
+    },
+    {
+      "type": "function",
+      "name": "create_appointment_checkout",
+      "description": "Create a checkout for appointment payment. This sends a 6-digit verification code to the patient's email. Amount should be the patient's responsibility after insurance coverage.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "appointment_id": {
+            "type": "string",
+            "description": "Appointment ID (required)"
+          },
+          "customer_name": {
+            "type": "string",
+            "description": "Customer's name"
+          },
+          "customer_email": {
+            "type": "string",
+            "description": "Customer's email address (required)"
+          },
+          "customer_phone": {
+            "type": "string",
+            "description": "Customer's phone number"
+          },
+          "appointment_type": {
+            "type": "string",
+            "description": "Type of appointment"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Amount the patient owes after insurance coverage"
+          }
+        },
+        "required": ["appointment_id", "customer_email"]
+      }
+    },
+    {
+      "type": "function",
+      "name": "verify_checkout_code",
+      "description": "Verify the 6-digit code sent to the patient's email. After verification, a payment link will be sent to the patient.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "payment_token": {
+            "type": "string",
+            "description": "Payment token from create_appointment_checkout (required)"
+          },
+          "verification_code": {
+            "type": "string",
+            "description": "6-digit verification code from email (required)"
+          }
+        },
+        "required": ["payment_token", "verification_code"]
+      }
+    },
+    {
+      "type": "function",
+      "name": "get_patient_claims",
+      "description": "Get patient's medical claims and billing information. Use when caller asks about recent claims, bills, or medical services they received. For billing inquiries, ask for insurance number (member_id) first, NOT phone number or email.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "member_id": {
+            "type": "string",
+            "description": "Insurance member ID (required for claim lookups)"
+          },
+          "patient_name": {
+            "type": "string",
+            "description": "Patient's full name"
+          },
+          "payer_name": {
+            "type": "string",
+            "description": "Insurance company name (optional)"
+          }
+        },
+        "required": ["member_id", "patient_name"]
+      }
+    },
+    {
+      "type": "function",
+      "name": "end_call",
+      "description": "End the call when the customer is done or when the conversation is complete."
+    }
+  ]
+}
+

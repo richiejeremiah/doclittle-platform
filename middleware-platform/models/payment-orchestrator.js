@@ -22,6 +22,8 @@ const PaymentRequest = require('../models/payment-request');
 const PaymentResponse = require('../models/payment-response');
 const PaymentService = require('./payment-service');
 const SMSService = require('./sms-service');
+const MastercardService = require('../services/mastercard-service');
+const VisaService = require('../services/visa-service');
 
 class PaymentOrchestrator {
     /**
@@ -248,44 +250,231 @@ class PaymentOrchestrator {
 
     /**
      * Handle direct Stripe payment
+     * Creates a Stripe Payment Intent for immediate processing
      * 
      * @private
      */
     static async _handleStripePayment(checkout, merchant, paymentRequest) {
         console.log('💳 Processing direct Stripe payment');
 
-        // TODO: Implement direct Stripe payment intent
-        // For now, fall back to link-based
-        console.log('⚠️ Direct Stripe not yet implemented, using link');
-        return await this._handleLinkPayment(checkout, merchant, paymentRequest);
+        try {
+            const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+            
+            if (!stripe) {
+                console.warn('⚠️ Stripe not configured, falling back to link payment');
+                return await this._handleLinkPayment(checkout, merchant, paymentRequest);
+            }
+
+            // Create payment intent
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: Math.round(checkout.amount * 100), // Convert to cents
+                currency: paymentRequest.payment.currency.toLowerCase() || 'usd',
+                automatic_payment_methods: {
+                    enabled: true
+                },
+                metadata: {
+                    checkout_id: checkout.id,
+                    merchant_id: merchant.id,
+                    transaction_id: paymentRequest.transaction_id,
+                    customer_email: checkout.customer_email || '',
+                    customer_phone: checkout.customer_phone || ''
+                },
+                description: `Payment for ${checkout.product_name || 'service'}`,
+                receipt_email: checkout.customer_email || undefined
+            });
+
+            console.log('✅ Stripe Payment Intent created:', paymentIntent.id);
+
+            return new PaymentResponse({
+                success: true,
+                transaction_id: paymentRequest.transaction_id,
+                checkout_id: checkout.id,
+                payment: {
+                    method: 'stripe',
+                    status: paymentIntent.status,
+                    amount: checkout.amount,
+                    currency: paymentRequest.payment.currency || 'USD',
+                    payment_intent_id: paymentIntent.id,
+                    client_secret: paymentIntent.client_secret
+                },
+                requires_action: paymentIntent.status === 'requires_action' || 
+                                paymentIntent.status === 'requires_payment_method',
+                action_type: paymentIntent.status === 'requires_action' ? 'stripe_3ds' : null,
+                message: paymentIntent.status === 'succeeded' 
+                    ? 'Payment processed successfully'
+                    : 'Payment requires additional action',
+                metadata: {
+                    payment_intent_id: paymentIntent.id,
+                    stripe_status: paymentIntent.status
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Stripe payment error:', error.message);
+            return new PaymentResponse({
+                success: false,
+                error: `Stripe payment failed: ${error.message}`,
+                transaction_id: paymentRequest.transaction_id
+            });
+        }
     }
 
     /**
      * Handle Mastercard Agent Pay
+     * Processes payment via Mastercard's voice commerce protocol
      * 
      * @private
      */
     static async _handleMastercardPayment(checkout, merchant, paymentRequest) {
         console.log('🔴 Processing Mastercard Agent Pay');
 
-        // TODO: Implement Mastercard Agent Pay integration
-        // For now, fall back to link-based
-        console.log('⚠️ Mastercard Agent Pay not yet implemented, using link');
-        return await this._handleLinkPayment(checkout, merchant, paymentRequest);
+        if (!MastercardService.isAvailable()) {
+            console.warn('⚠️ Mastercard Agent Pay not configured, falling back to link payment');
+            return await this._handleLinkPayment(checkout, merchant, paymentRequest);
+        }
+
+        try {
+            // Get mandate from payment request metadata
+            const mandate = paymentRequest.metadata?.mastercard_mandate;
+            
+            if (!mandate) {
+                return new PaymentResponse({
+                    success: false,
+                    error: 'Mastercard mandate required for Agent Pay',
+                    transaction_id: paymentRequest.transaction_id
+                });
+            }
+
+            // Verify mandate
+            const mandateVerification = await MastercardService.verifyIntentMandate(mandate);
+            if (!mandateVerification.valid) {
+                return new PaymentResponse({
+                    success: false,
+                    error: `Mandate verification failed: ${mandateVerification.error}`,
+                    transaction_id: paymentRequest.transaction_id
+                });
+            }
+
+            // Process payment
+            const paymentResult = await MastercardService.processPayment({
+                mandateId: mandate.id,
+                amount: checkout.amount,
+                currency: paymentRequest.payment.currency || 'USD',
+                description: `Payment for ${checkout.product_name || 'service'}`
+            });
+
+            if (!paymentResult.success) {
+                return new PaymentResponse({
+                    success: false,
+                    error: paymentResult.error || 'Mastercard payment failed',
+                    transaction_id: paymentRequest.transaction_id
+                });
+            }
+
+            return new PaymentResponse({
+                success: true,
+                transaction_id: paymentRequest.transaction_id,
+                checkout_id: checkout.id,
+                payment: {
+                    method: 'mastercard',
+                    status: 'completed',
+                    amount: checkout.amount,
+                    currency: paymentRequest.payment.currency || 'USD'
+                },
+                message: 'Payment processed via Mastercard Agent Pay',
+                metadata: {
+                    mastercard_transaction_id: paymentResult.transaction_id,
+                    mandate_id: mandate.id
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Mastercard payment error:', error.message);
+            return new PaymentResponse({
+                success: false,
+                error: `Mastercard payment failed: ${error.message}`,
+                transaction_id: paymentRequest.transaction_id
+            });
+        }
     }
 
     /**
      * Handle Visa Agent Toolkit
+     * Processes payment via Visa's voice commerce protocol
      * 
      * @private
      */
     static async _handleVisaPayment(checkout, merchant, paymentRequest) {
         console.log('🔵 Processing Visa Agent Toolkit');
 
-        // TODO: Implement Visa Agent Toolkit integration
-        // For now, fall back to link-based
-        console.log('⚠️ Visa Agent Toolkit not yet implemented, using link');
-        return await this._handleLinkPayment(checkout, merchant, paymentRequest);
+        if (!VisaService.isAvailable()) {
+            console.warn('⚠️ Visa Agent Toolkit not configured, falling back to link payment');
+            return await this._handleLinkPayment(checkout, merchant, paymentRequest);
+        }
+
+        try {
+            // Get mandate from payment request metadata
+            const mandate = paymentRequest.metadata?.visa_mandate;
+            
+            if (!mandate) {
+                return new PaymentResponse({
+                    success: false,
+                    error: 'Visa mandate required for Agent Toolkit',
+                    transaction_id: paymentRequest.transaction_id
+                });
+            }
+
+            // Verify mandate
+            const mandateVerification = await VisaService.verifyIntentMandate(mandate);
+            if (!mandateVerification.valid) {
+                return new PaymentResponse({
+                    success: false,
+                    error: `Mandate verification failed: ${mandateVerification.error}`,
+                    transaction_id: paymentRequest.transaction_id
+                });
+            }
+
+            // Process payment
+            const paymentResult = await VisaService.processPayment({
+                mandateId: mandate.id,
+                amount: checkout.amount,
+                currency: paymentRequest.payment.currency || 'USD',
+                description: `Payment for ${checkout.product_name || 'service'}`
+            });
+
+            if (!paymentResult.success) {
+                return new PaymentResponse({
+                    success: false,
+                    error: paymentResult.error || 'Visa payment failed',
+                    transaction_id: paymentRequest.transaction_id
+                });
+            }
+
+            return new PaymentResponse({
+                success: true,
+                transaction_id: paymentRequest.transaction_id,
+                checkout_id: checkout.id,
+                payment: {
+                    method: 'visa',
+                    status: 'completed',
+                    amount: checkout.amount,
+                    currency: paymentRequest.payment.currency || 'USD'
+                },
+                message: 'Payment processed via Visa Agent Toolkit',
+                metadata: {
+                    visa_transaction_id: paymentResult.transaction_id,
+                    mandate_id: mandate.id
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Visa payment error:', error.message);
+            return new PaymentResponse({
+                success: false,
+                error: `Visa payment failed: ${error.message}`,
+                transaction_id: paymentRequest.transaction_id
+            });
+        }
     }
 
     /**
