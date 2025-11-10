@@ -52,13 +52,57 @@ if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Middleware
+// Import WebSocket for Retell LLM
+const WebSocket = require('ws');
+const RetellWebSocketHandler = require('./webhooks/retell-websocket');
+
+// Import middleware
+const { securityHeaders, sanitizeInput, requestLogger } = require('./middleware/security');
+const { apiLimiter, authLimiter, paymentLimiter, voiceLimiter } = require('./middleware/rate-limiter');
+const logger = require('./services/logger');
+
+// Security middleware (must be first)
+app.use(securityHeaders);
+
+// CORS
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// Body parsing
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Request logging
+app.use(requestLogger);
+
+// Input sanitization
+app.use(sanitizeInput);
+
+// Global rate limiting
+app.use('/api/', apiLimiter);
 
 console.log('✅ Database initialized');
 console.log('✅ FHIR integration enabled');
+
+// ============================================
+// RETELL LLM WEBSOCKET SERVER
+// ============================================
+// Get API base URL - use production domain or localhost for development
+const API_BASE_URL = process.env.API_BASE_URL || process.env.BASE_URL ||
+  (process.env.NODE_ENV === 'production' ? 'https://doclittle.site' : `http://localhost:${PORT}`);
+
+const retellHandler = new RetellWebSocketHandler(db, {
+  apiBaseUrl: API_BASE_URL
+});
+
+// Create WebSocket server for Retell LLM (will be attached to HTTP server)
+const wss = new WebSocket.Server({ noServer: true });
+
+wss.on('connection', (ws, req) => {
+  console.log('📞 New Retell LLM WebSocket connection');
+  retellHandler.handleConnection(ws, req);
+});
+
+console.log('✅ Retell LLM WebSocket handler ready');
 
 // ============================================
 // FHIR API Routes
@@ -168,7 +212,7 @@ function calculateFraudScore(data) {
 // ============================================
 // TWILIO VOICE INCOMING HANDLER
 // ============================================
-app.post('/voice/incoming', async (req, res) => {
+app.post('/voice/incoming', voiceLimiter, async (req, res) => {
   try {
     console.log('\n📞 INCOMING CALL from Twilio');
     console.log('From:', req.body.From);
@@ -210,40 +254,12 @@ app.post('/voice/incoming', async (req, res) => {
     const callId = retellRegisterResp.data.call_id;
     console.log('✅ Call registered! Call ID:', callId);
 
-    // ========== FHIR INTEGRATION ==========
-    // Create FHIR Patient and Encounter for this call
-    try {
-      const callData = FHIRAdapter.retellCallToFHIR({
-        call_id: callId,
-        from_number: req.body.From,
-        to_number: req.body.To,
-        metadata: {
-          twilio_call_sid: req.body.CallSid,
-          merchant_id: process.env.MERCHANT_ID || 'd10794ff-ca11-4e6f-93e9-560162b4f884'
-        }
-      });
-
-      const fhirResources = await FHIRService.processVoiceCall(callData);
-      console.log(`[FHIR] Created Patient: ${fhirResources.patient.id}, Encounter: ${fhirResources.encounter.id}`);
-
-      // Store FHIR IDs for later use
-      global.activeCalls = global.activeCalls || {};
-      global.activeCalls[callId] = {
-        patientId: fhirResources.patient.id,
-        encounterId: fhirResources.encounter.id,
-        callSid: req.body.CallSid
-      };
-    } catch (fhirError) {
-      console.error('[FHIR] Error creating FHIR resources:', fhirError.message);
-      // Continue with call even if FHIR fails (for now)
-    }
-    // ======================================
-
     // Build SIP URI using the call_id (as per Retell docs)
     const sipUri = `sip:${callId}@5t4n6j0wnrl.sip.livekit.cloud`;
     console.log('📞 Dialing to Retell SIP endpoint:', sipUri);
 
-    // Return TwiML to dial to Retell's SIP endpoint
+    // Return TwiML immediately to avoid timeout
+    // Twilio requires response within 10-15 seconds
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Dial>
@@ -252,6 +268,38 @@ app.post('/voice/incoming', async (req, res) => {
 </Response>`;
 
     res.type('text/xml').send(twiml);
+
+    // ========== FHIR INTEGRATION ==========
+    // Process FHIR resources asynchronously AFTER responding to Twilio
+    // This prevents timeout issues
+    setImmediate(async () => {
+      try {
+        const callData = FHIRAdapter.retellCallToFHIR({
+          call_id: callId,
+          from_number: req.body.From,
+          to_number: req.body.To,
+          metadata: {
+            twilio_call_sid: req.body.CallSid,
+            merchant_id: process.env.MERCHANT_ID || 'd10794ff-ca11-4e6f-93e9-560162b4f884'
+          }
+        });
+
+        const fhirResources = await FHIRService.processVoiceCall(callData);
+        console.log(`[FHIR] Created Patient: ${fhirResources.patient.id}, Encounter: ${fhirResources.encounter.id}`);
+
+        // Store FHIR IDs for later use
+        global.activeCalls = global.activeCalls || {};
+        global.activeCalls[callId] = {
+          patientId: fhirResources.patient.id,
+          encounterId: fhirResources.encounter.id,
+          callSid: req.body.CallSid
+        };
+      } catch (fhirError) {
+        console.error('[FHIR] Error creating FHIR resources:', fhirError.message);
+        // Continue with call even if FHIR fails (for now)
+      }
+    });
+    // ======================================
 
   } catch (error) {
     console.error('❌ Error handling incoming call:');
@@ -276,7 +324,7 @@ app.post('/voice/incoming', async (req, res) => {
 });
 
 // Create appointment checkout (appointment payment, not products)
-app.post('/voice/appointments/checkout', async (req, res) => {
+app.post('/voice/appointments/checkout', voiceLimiter, async (req, res) => {
   try {
     console.log('\n💳 VOICE: Create Appointment Checkout');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
@@ -483,14 +531,74 @@ app.post('/voice/checkout/verify', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Checkout not found' });
     }
 
+    // Check if patient has wallet with sufficient balance
+    let walletInfo = null;
+    try {
+      // Try to find FHIR patient by email or phone
+      let fhirPatient = null;
+      if (checkout.customer_email) {
+        fhirPatient = db.getFHIRPatientByEmail(checkout.customer_email);
+      }
+      if (!fhirPatient && checkout.customer_phone) {
+        fhirPatient = db.getFHIRPatientByPhone(checkout.customer_phone);
+      }
+
+      if (fhirPatient) {
+        // Get patient wallet
+        const CircleService = require('./services/circle-service');
+        const walletResult = await CircleService.getOrCreatePatientWallet(fhirPatient.resource_id, {
+          createIfNotExists: false // Don't create wallet if it doesn't exist
+        });
+
+        if (walletResult.success && walletResult.account) {
+          // Get wallet balance
+          const balanceResult = await CircleService.getWalletBalance(walletResult.account.circle_wallet_id);
+
+          if (balanceResult.success) {
+            // Extract USDC balance from balances array
+            const balances = balanceResult.balances || [];
+            let usdcBalance = 0;
+            let usdcCurrency = 'USDC';
+
+            // Find USDC balance (token balances are usually in format { token: { symbol: 'USDC', ... }, amount: '1000000' })
+            // Amount is typically in smallest unit (e.g., 6 decimals for USDC)
+            for (const balance of balances) {
+              if (balance.token && (balance.token.symbol === 'USDC' || balance.token.symbol === 'USDC.e')) {
+                // Convert from smallest unit (6 decimals) to dollars
+                const amount = parseFloat(balance.amount || '0');
+                usdcBalance = amount / 1000000; // USDC has 6 decimals
+                usdcCurrency = balance.token.symbol || 'USDC';
+                break;
+              }
+            }
+
+            walletInfo = {
+              has_wallet: true,
+              wallet_id: walletResult.account.circle_wallet_id,
+              balance: usdcBalance,
+              currency: usdcCurrency,
+              sufficient_balance: usdcBalance >= checkout.amount
+            };
+            console.log(`💰 Patient wallet found: Balance $${walletInfo.balance.toFixed(2)} ${walletInfo.currency}`);
+          }
+        }
+      }
+    } catch (walletError) {
+      console.warn('⚠️  Could not check wallet balance:', walletError.message);
+      // Continue without wallet info
+    }
+
     // Build payment link with better fallback logic
-    // Priority: BASE_URL env var > Railway URL (if detected) > localhost
-    let baseUrl = process.env.BASE_URL;
+    // Priority: API_BASE_URL > BASE_URL > Railway URL (if detected) > production domain > localhost
+    let baseUrl = process.env.API_BASE_URL || process.env.BASE_URL;
     if (!baseUrl) {
       // Check if running on Railway (common production environment)
       const railwayUrl = process.env.RAILWAY_STATIC_URL || process.env.RAILWAY_PUBLIC_DOMAIN;
       if (railwayUrl) {
         baseUrl = `https://${railwayUrl}`;
+      } else if (process.env.NODE_ENV === 'production') {
+        // Production: use doclittle.site domain
+        baseUrl = 'https://doclittle.site';
       } else {
         // Fallback to localhost for development
         baseUrl = 'http://localhost:4000';
@@ -505,7 +613,9 @@ app.post('/voice/checkout/verify', async (req, res) => {
         const EmailService = require('./services/email-service');
         emailResult = await EmailService.sendPaymentLinkEmail(checkout.customer_email, paymentLink, {
           product_name: checkout.product_name,
-          amount: checkout.amount
+          amount: checkout.amount,
+          wallet_balance: walletInfo?.balance,
+          can_pay_from_wallet: walletInfo?.sufficient_balance
         });
       } catch (emailError) {
         console.error('⚠️  Email service error:', emailError.message);
@@ -520,7 +630,8 @@ app.post('/voice/checkout/verify', async (req, res) => {
       success: true,
       message: emailResult.success ? 'Payment link emailed successfully' : (emailResult.error || 'Email not sent'),
       payment_token: token,
-      checkout_id: checkout.id
+      checkout_id: checkout.id,
+      wallet: walletInfo // Include wallet info in response
     });
   } catch (error) {
     console.error('❌ Error verifying email code:', error);
@@ -989,11 +1100,188 @@ app.get('/payment/:token', async (req, res) => {
 });
 
 // Process payment
-app.post('/process-payment', async (req, res) => {
+app.post('/process-payment', paymentLimiter, async (req, res) => {
   try {
-    const { payment_method_id, checkout_id, amount } = req.body;
+    const { payment_method_id, checkout_id, amount, payment_method = 'stripe' } = req.body;
 
     console.log(`\n💳 Processing payment for checkout: ${checkout_id}`);
+    console.log(`   Method: ${payment_method}`);
+    console.log(`   Amount: $${amount}`);
+
+    // Get checkout to check for linked appointment and patient
+    const checkout = db.getVoiceCheckout(checkout_id);
+    if (!checkout) {
+      throw new Error('Checkout not found');
+    }
+
+    // Handle wallet payment
+    if (payment_method === 'wallet') {
+      try {
+        // Find FHIR patient by email or phone
+        let fhirPatient = null;
+        if (checkout.customer_email) {
+          fhirPatient = db.getFHIRPatientByEmail(checkout.customer_email);
+        }
+        if (!fhirPatient && checkout.customer_phone) {
+          fhirPatient = db.getFHIRPatientByPhone(checkout.customer_phone);
+        }
+
+        if (!fhirPatient) {
+          return res.status(400).json({
+            success: false,
+            error: 'Patient not found. Cannot process wallet payment.'
+          });
+        }
+
+        // Get patient wallet
+        const CircleService = require('./services/circle-service');
+        const walletResult = await CircleService.getOrCreatePatientWallet(fhirPatient.resource_id, {
+          createIfNotExists: false
+        });
+
+        if (!walletResult.success || !walletResult.account) {
+          return res.status(400).json({
+            success: false,
+            error: 'Patient wallet not found. Please use a card payment instead.'
+          });
+        }
+
+        // Check wallet balance
+        const balanceResult = await CircleService.getWalletBalance(walletResult.account.circle_wallet_id);
+
+        if (!balanceResult.success) {
+          return res.status(500).json({
+            success: false,
+            error: 'Could not retrieve wallet balance.'
+          });
+        }
+
+        // Extract USDC balance from balances array
+        const balances = balanceResult.balances || [];
+        let walletBalance = 0;
+
+        // Find USDC balance (token balances are usually in format { token: { symbol: 'USDC', ... }, amount: '1000000' })
+        // Amount is typically in smallest unit (e.g., 6 decimals for USDC)
+        for (const balance of balances) {
+          if (balance.token && (balance.token.symbol === 'USDC' || balance.token.symbol === 'USDC.e')) {
+            // Convert from smallest unit (6 decimals) to dollars
+            const amount = parseFloat(balance.amount || '0');
+            walletBalance = amount / 1000000; // USDC has 6 decimals
+            break;
+          }
+        }
+
+        if (walletBalance < amount) {
+          return res.status(400).json({
+            success: false,
+            error: `Insufficient wallet balance. Available: $${walletBalance.toFixed(2)}, Required: $${amount.toFixed(2)}`
+          });
+        }
+
+        // Transfer from patient wallet to provider wallet
+        // Get provider wallet (system wallet or merchant wallet)
+        const providerWalletId = process.env.CIRCLE_PROVIDER_WALLET_ID || process.env.CIRCLE_SYSTEM_WALLET_ID;
+
+        if (!providerWalletId) {
+          return res.status(500).json({
+            success: false,
+            error: 'Provider wallet not configured. Cannot process wallet payment.'
+          });
+        }
+
+        // Create transfer from patient to provider
+        const transferResult = await CircleService.createTransfer({
+          fromWalletId: walletResult.account.circle_wallet_id,
+          toWalletId: providerWalletId,
+          amount: amount,
+          currency: 'USDC',
+          claimId: checkout.appointment_id || checkout.id,
+          description: `Payment for ${checkout.product_name || 'appointment'} - Checkout ${checkout_id}`
+        });
+
+        if (!transferResult.success) {
+          return res.status(500).json({
+            success: false,
+            error: transferResult.error || 'Failed to process wallet transfer.'
+          });
+        }
+
+        // Record the transfer
+        const { v4: uuidv4 } = require('uuid');
+        const transferId = uuidv4();
+
+        db.db.prepare(`
+          INSERT INTO circle_transfers (
+            id, claim_id, from_wallet_id, to_wallet_id, amount, currency,
+            circle_transfer_id, status, created_at, completed_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          transferId,
+          null,
+          walletResult.account.circle_wallet_id,
+          providerWalletId,
+          amount,
+          'USDC',
+          transferResult.transferId || transferResult.id,
+          'completed',
+          new Date().toISOString(),
+          new Date().toISOString()
+        );
+
+        console.log(`✅ Wallet payment successful: ${transferResult.transferId}`);
+        console.log(`   From: ${walletResult.account.circle_wallet_id}`);
+        console.log(`   To: ${providerWalletId}`);
+        console.log(`   Amount: $${amount} USDC`);
+
+        // Update checkout status
+        db.updateVoiceCheckout(checkout_id, {
+          status: 'completed',
+          payment_method: 'wallet',
+          payment_intent_id: transferResult.transferId || transferResult.id
+        });
+
+        console.log(`✅ Checkout ${checkout_id} marked as completed`);
+
+        // Auto-confirm appointment if linked
+        if (checkout.appointment_id) {
+          try {
+            const BookingService = require('./services/booking-service');
+            const confirmResult = await BookingService.confirmAppointment(checkout.appointment_id);
+            if (confirmResult.success) {
+              console.log(`✅ Appointment ${checkout.appointment_id} auto-confirmed after payment`);
+            } else {
+              console.warn(`⚠️  Could not auto-confirm appointment: ${confirmResult.error}`);
+            }
+          } catch (confirmError) {
+            console.warn(`⚠️  Error auto-confirming appointment: ${confirmError.message}`);
+          }
+        }
+
+        return res.json({
+          success: true,
+          payment_method: 'wallet',
+          transfer_id: transferResult.transferId || transferResult.id,
+          checkout_id: checkout_id,
+          appointment_confirmed: checkout.appointment_id ? true : false,
+          wallet_balance_after: walletBalance - amount
+        });
+
+      } catch (walletError) {
+        console.error('❌ Wallet payment error:', walletError);
+        return res.status(500).json({
+          success: false,
+          error: walletError.message || 'Wallet payment failed'
+        });
+      }
+    }
+
+    // Handle Stripe payment (default)
+    if (!payment_method_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Payment method ID is required for card payments'
+      });
+    }
 
     // Create Stripe payment intent
     const paymentIntent = await stripe.paymentIntents.create({
@@ -1008,12 +1296,6 @@ app.post('/process-payment', async (req, res) => {
     });
 
     console.log(`✅ Stripe payment successful: ${paymentIntent.id}`);
-
-    // Get checkout to check for linked appointment
-    const checkout = db.getVoiceCheckout(checkout_id);
-    if (!checkout) {
-      throw new Error('Checkout not found');
-    }
 
     // Update checkout status
     db.updateVoiceCheckout(checkout_id, {
@@ -1041,6 +1323,7 @@ app.post('/process-payment', async (req, res) => {
 
     res.json({
       success: true,
+      payment_method: 'stripe',
       payment_intent_id: paymentIntent.id,
       checkout_id: checkout_id,
       appointment_confirmed: checkout.appointment_id ? true : false
@@ -1060,7 +1343,7 @@ app.post('/process-payment', async (req, res) => {
 // ============================================
 
 // Signup
-app.post('/api/auth/signup', async (req, res) => {
+app.post('/api/auth/signup', authLimiter, async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
@@ -1138,7 +1421,7 @@ app.post('/api/auth/signup', async (req, res) => {
 });
 
 // Login
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -2748,28 +3031,59 @@ app.post('/api/patient/wallet/deposit', async (req, res) => {
     }
 
     // Get or create patient wallet
+    // First, check if patientId is a FHIR Patient resource_id
+    // If so, use it directly; otherwise, try to find FHIR patient by phone/email
+    let fhirPatientId = patientId;
     let account = db.getCircleAccountByEntity('patient', patientId);
 
+    // If wallet doesn't exist, try to find FHIR patient and create wallet using resource_id
     if (!account) {
-      // Create wallet if it doesn't exist
-      const createResponse = await fetch(`http://localhost:${PORT}/api/circle/wallets`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          entityType: 'patient',
-          entityId: patientId,
-          description: `Patient wallet for ${patientId}`
-        })
+      // Check if this is already a FHIR Patient resource_id
+      const fhirPatient = db.getFHIRPatient(patientId);
+
+      if (fhirPatient) {
+        // Use FHIR Patient resource_id directly
+        fhirPatientId = fhirPatient.resource_id;
+        console.log(`📋 Using FHIR Patient resource_id: ${fhirPatientId}`);
+      } else {
+        // Try to find FHIR patient by phone or email if provided
+        const { phone, email } = req.body;
+        if (phone || email) {
+          let patient = null;
+          if (phone) {
+            patient = db.getFHIRPatientByPhone(phone);
+          }
+          if (!patient && email) {
+            patient = db.getFHIRPatientByEmail(email);
+          }
+
+          if (patient) {
+            fhirPatientId = patient.resource_id;
+            console.log(`📋 Found FHIR Patient by contact info: ${fhirPatientId}`);
+          }
+        }
+      }
+
+      // Get or create wallet using FHIR Patient resource_id
+      const CircleService = require('./services/circle-service');
+      const walletResult = await CircleService.getOrCreatePatientWallet(fhirPatientId, {
+        createIfNotExists: true
       });
 
-      if (!createResponse.ok) {
+      if (!walletResult.success) {
         return res.status(500).json({
           success: false,
-          error: 'Failed to create wallet'
+          error: walletResult.error || 'Failed to create wallet'
         });
       }
 
-      account = db.getCircleAccountByEntity('patient', patientId);
+      account = walletResult.account;
+
+      // Update patientId to use FHIR resource_id for consistency
+      if (fhirPatientId !== patientId) {
+        console.log(`🔄 Updated patientId from ${patientId} to FHIR resource_id ${fhirPatientId}`);
+        patientId = fhirPatientId;
+      }
     }
 
     if (!account || !account.circle_wallet_id) {
@@ -2956,11 +3270,224 @@ app.post('/api/patient/wallet/deposit', async (req, res) => {
         message: `Wire transfer initiated for $${amount.toFixed(2)}. Funds will be available same day.`,
         note: 'In production, this would integrate with Circle Wire Transfer API.'
       });
+    } else if (method === 'stripe') {
+      // Stripe Payment - Credit/Debit Card
+      // Creates a Stripe Payment Intent and converts USD to USDC for wallet deposit
+      try {
+        const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+        if (!stripe) {
+          return res.status(500).json({
+            success: false,
+            error: 'Stripe not configured. Please set STRIPE_SECRET_KEY in environment variables.'
+          });
+        }
+
+        // Get payment method ID from request (required for Stripe)
+        const { payment_method_id, customer_email, customer_name } = req.body;
+
+        if (!payment_method_id) {
+          // If no payment method ID, create a Payment Intent that requires client-side confirmation
+          const paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(amount * 100), // Convert to cents
+            currency: 'usd',
+            metadata: {
+              patient_id: patientId,
+              wallet_id: account.circle_wallet_id,
+              deposit_id: depositId,
+              type: 'wallet_deposit'
+            },
+            description: `Wallet deposit for patient ${patientId}`,
+            receipt_email: customer_email || undefined
+          });
+
+          // Create pending deposit record
+          db.db.prepare(`
+            INSERT INTO circle_transfers (
+              id, claim_id, from_wallet_id, to_wallet_id, amount, currency,
+              circle_transfer_id, status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(
+            depositId,
+            null,
+            'stripe',
+            account.circle_wallet_id,
+            amount,
+            'USDC',
+            paymentIntent.id,
+            'pending',
+            new Date().toISOString()
+          );
+
+          console.log(`💳 Stripe Payment Intent created for $${amount} wallet deposit: ${paymentIntent.id}`);
+
+          res.json({
+            success: true,
+            depositId: depositId,
+            amount: amount,
+            walletId: account.circle_wallet_id,
+            method: 'stripe',
+            status: 'pending',
+            payment_intent_id: paymentIntent.id,
+            client_secret: paymentIntent.client_secret,
+            requires_action: paymentIntent.status === 'requires_action',
+            message: `Stripe payment initiated for $${amount.toFixed(2)}. Complete payment to fund wallet.`,
+            note: 'Payment will be converted to USDC and deposited to your wallet after successful payment.'
+          });
+        } else {
+          // Payment method provided - create and confirm payment intent
+          const paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(amount * 100), // Convert to cents
+            currency: 'usd',
+            payment_method: payment_method_id,
+            confirm: true,
+            metadata: {
+              patient_id: patientId,
+              wallet_id: account.circle_wallet_id,
+              deposit_id: depositId,
+              type: 'wallet_deposit'
+            },
+            description: `Wallet deposit for patient ${patientId}`,
+            receipt_email: customer_email || undefined
+          });
+
+          if (paymentIntent.status === 'succeeded') {
+            // Payment successful - create pending transfer record
+            // The actual wallet funding will happen via Stripe webhook for reliability
+            // This ensures payment is confirmed before funding wallet
+
+            db.db.prepare(`
+              INSERT INTO circle_transfers (
+                id, claim_id, from_wallet_id, to_wallet_id, amount, currency,
+                circle_transfer_id, status, created_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              depositId,
+              null,
+              'stripe',
+              account.circle_wallet_id,
+              amount,
+              'USDC',
+              paymentIntent.id,
+              'pending', // Will be updated by webhook when Circle transfer completes
+              new Date().toISOString()
+            );
+
+            console.log(`✅ Stripe payment successful: ${paymentIntent.id}`);
+            console.log(`💰 Wallet deposit record created. Funding will be processed via webhook.`);
+
+            // Attempt to fund wallet immediately (webhook will also handle this as backup)
+            try {
+              const CircleService = require('./services/circle-service');
+              const fundResult = await CircleService.fundWallet(account.circle_wallet_id, amount);
+
+              if (fundResult.success) {
+                // Update transfer status to completed
+                db.db.prepare(`
+                  UPDATE circle_transfers 
+                  SET status = ?, completed_at = ?, circle_transfer_id = ?
+                  WHERE id = ?
+                `).run(
+                  'completed',
+                  new Date().toISOString(),
+                  fundResult.transferId || paymentIntent.id,
+                  depositId
+                );
+
+                console.log(`✅ Wallet funded immediately: ${fundResult.transferId}`);
+              }
+            } catch (fundError) {
+              console.warn(`⚠️  Immediate wallet funding failed, webhook will handle: ${fundError.message}`);
+            }
+
+            res.json({
+              success: true,
+              depositId: depositId,
+              amount: amount,
+              walletId: account.circle_wallet_id,
+              method: 'stripe',
+              status: 'completed',
+              payment_intent_id: paymentIntent.id,
+              stripe_payment_id: paymentIntent.id,
+              message: `Successfully processed Stripe payment. Wallet deposit will be completed shortly.`,
+              note: 'Payment received. USDC will be deposited to your wallet.'
+            });
+          } else if (paymentIntent.status === 'requires_action') {
+            // Payment requires 3D Secure or other authentication
+            db.db.prepare(`
+              INSERT INTO circle_transfers (
+                id, claim_id, from_wallet_id, to_wallet_id, amount, currency,
+                circle_transfer_id, status, created_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              depositId,
+              null,
+              'stripe',
+              account.circle_wallet_id,
+              amount,
+              'USDC',
+              paymentIntent.id,
+              'pending',
+              new Date().toISOString()
+            );
+
+            res.json({
+              success: true,
+              depositId: depositId,
+              amount: amount,
+              walletId: account.circle_wallet_id,
+              method: 'stripe',
+              status: 'requires_action',
+              payment_intent_id: paymentIntent.id,
+              client_secret: paymentIntent.client_secret,
+              requires_action: true,
+              message: 'Payment requires authentication. Please complete 3D Secure verification.',
+              note: 'After payment is confirmed, funds will be converted to USDC and deposited to wallet.'
+            });
+          } else {
+            // Payment failed or requires payment method
+            res.status(400).json({
+              success: false,
+              error: `Payment failed: ${paymentIntent.status}`,
+              payment_intent_id: paymentIntent.id,
+              status: paymentIntent.status
+            });
+          }
+        }
+      } catch (error) {
+        console.error('❌ Stripe payment error:', error);
+
+        // Create failed deposit record
+        db.db.prepare(`
+          INSERT INTO circle_transfers (
+            id, claim_id, from_wallet_id, to_wallet_id, amount, currency,
+            circle_transfer_id, status, error_message, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          depositId,
+          null,
+          'stripe',
+          account.circle_wallet_id,
+          amount,
+          'USDC',
+          `failed_${Date.now()}`,
+          'failed',
+          error.message,
+          new Date().toISOString()
+        );
+
+        res.status(500).json({
+          success: false,
+          error: error.message || 'Stripe payment failed',
+          depositId: depositId,
+          method: 'stripe'
+        });
+      }
     } else {
-      // Card payment - would integrate with Circle Card API
+      // Unknown payment method
       res.json({
         success: false,
-        error: 'Card payments not yet implemented. Please use ACH or Wire transfer, or test deposit for sandbox.'
+        error: `Unknown payment method: ${method}. Supported methods: test, ach, wire, stripe`
       });
     }
   } catch (error) {
@@ -4153,7 +4680,7 @@ app.get('/api/provider/providers', async (req, res) => {
 // ============================================
 
 // Patient: Send verification code
-app.post('/api/patient/verify/send', async (req, res) => {
+app.post('/api/patient/verify/send', authLimiter, async (req, res) => {
   try {
     const { phone } = req.body;
 
@@ -4980,11 +5507,128 @@ app.post('/webhook/stripe', async (req, res) => {
       case 'payment_intent.succeeded':
         const paymentIntent = event.data.object;
         console.log(`✅ PaymentIntent ${paymentIntent.id} succeeded`);
+
+        // Check if this is a wallet deposit payment
+        if (paymentIntent.metadata && paymentIntent.metadata.type === 'wallet_deposit') {
+          console.log(`💰 Processing wallet deposit for PaymentIntent ${paymentIntent.id}`);
+
+          const depositId = paymentIntent.metadata.deposit_id;
+          const walletId = paymentIntent.metadata.wallet_id;
+          const patientId = paymentIntent.metadata.patient_id;
+          const amount = paymentIntent.amount / 100; // Convert from cents to dollars
+
+          try {
+            // Find the pending transfer record
+            const transferStmt = db.db.prepare(`
+              SELECT * FROM circle_transfers 
+              WHERE id = ? OR circle_transfer_id = ?
+              ORDER BY created_at DESC LIMIT 1
+            `);
+            const transfer = transferStmt.get(depositId, paymentIntent.id);
+
+            if (transfer && transfer.status === 'pending') {
+              // Fund the wallet with USDC
+              const CircleService = require('./services/circle-service');
+              const fundResult = await CircleService.fundWallet(walletId, amount);
+
+              if (fundResult.success) {
+                // Update transfer status to completed
+                const updateStmt = db.db.prepare(`
+                  UPDATE circle_transfers 
+                  SET status = ?, completed_at = ?, circle_transfer_id = ?
+                  WHERE id = ?
+                `);
+                updateStmt.run(
+                  'completed',
+                  new Date().toISOString(),
+                  fundResult.transferId || paymentIntent.id,
+                  depositId
+                );
+
+                console.log(`✅ Wallet deposit completed: ${depositId}`);
+                console.log(`   Amount: $${amount.toFixed(2)} USDC`);
+                console.log(`   Wallet: ${walletId}`);
+                console.log(`   Circle Transfer: ${fundResult.transferId}`);
+              } else {
+                console.error(`❌ Failed to fund wallet: ${fundResult.error}`);
+                // Keep status as pending - will retry or handle manually
+              }
+            } else if (!transfer) {
+              // Transfer record doesn't exist - create it
+              const insertStmt = db.db.prepare(`
+                INSERT INTO circle_transfers (
+                  id, claim_id, from_wallet_id, to_wallet_id, amount, currency,
+                  circle_transfer_id, status, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `);
+              insertStmt.run(
+                depositId || `deposit_${Date.now()}`,
+                null,
+                'stripe',
+                walletId,
+                amount,
+                'USDC',
+                paymentIntent.id,
+                'pending',
+                new Date().toISOString()
+              );
+
+              // Try to fund wallet
+              const CircleService = require('./services/circle-service');
+              const fundResult = await CircleService.fundWallet(walletId, amount);
+
+              if (fundResult.success) {
+                const updateStmt = db.db.prepare(`
+                  UPDATE circle_transfers 
+                  SET status = ?, completed_at = ?, circle_transfer_id = ?
+                  WHERE circle_transfer_id = ?
+                `);
+                updateStmt.run(
+                  'completed',
+                  new Date().toISOString(),
+                  fundResult.transferId || paymentIntent.id,
+                  paymentIntent.id
+                );
+
+                console.log(`✅ Wallet deposit created and completed from webhook`);
+              }
+            }
+          } catch (error) {
+            console.error(`❌ Error processing wallet deposit webhook:`, error);
+            // Don't throw - we'll retry or handle manually
+          }
+        } else {
+          // Regular payment intent - handle as before
+          console.log(`📝 Processing regular payment: ${paymentIntent.id}`);
+        }
         break;
 
       case 'payment_intent.payment_failed':
         const failedPayment = event.data.object;
         console.log(`❌ PaymentIntent ${failedPayment.id} failed`);
+
+        // Update wallet deposit status if this was a wallet deposit
+        if (failedPayment.metadata && failedPayment.metadata.type === 'wallet_deposit') {
+          const depositId = failedPayment.metadata.deposit_id;
+
+          try {
+            const updateStmt = db.db.prepare(`
+              UPDATE circle_transfers 
+              SET status = ?, error_message = ?
+              WHERE id = ? OR circle_transfer_id = ?
+            `);
+            updateStmt.run(
+              'failed',
+              `Payment failed: ${failedPayment.last_payment_error?.message || 'Unknown error'}`,
+              depositId,
+              failedPayment.id
+            );
+
+            console.log(`❌ Wallet deposit marked as failed: ${depositId}`);
+          } catch (error) {
+            console.error(`❌ Error updating failed deposit:`, error);
+          }
+        }
         break;
 
       default:
@@ -5590,7 +6234,7 @@ app.use((err, req, res, next) => {
 // START SERVER
 // ============================================
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log('\n' + '='.repeat(60));
   console.log('🚀 MIDDLEWARE PLATFORM - PRODUCTION READY');
   console.log('='.repeat(60));
@@ -5655,6 +6299,7 @@ app.listen(PORT, () => {
   console.log(`   GET    http://localhost:${PORT}/api/admin/billing/eob ⭐ NEW`);
   console.log(`   GET    http://localhost:${PORT}/api/admin/patients/:id/eob ⭐ NEW`);
   console.log('\n🔔 Webhooks:');
+  console.log(`   WS     ws://localhost:${PORT}/webhook/retell/llm ⭐ NEW (Retell LLM)`);
   console.log(`   POST   http://localhost:${PORT}/webhook/retell/events`);
   console.log(`   POST   http://localhost:${PORT}/webhook/retell/end-of-call`);
   console.log(`   POST   http://localhost:${PORT}/webhook/stripe`);
@@ -5696,7 +6341,21 @@ app.listen(PORT, () => {
   console.log('   ✅ Using database.js module for all DB operations');
   console.log('   ✅ Transforms Retell format → PaymentRequest format');
   console.log('   ✅ SIP Endpoint: sip:{call_id}@5t4n6j0wnrl.sip.livekit.cloud');
+  console.log('   ✅ Retell LLM WebSocket: ws://localhost:' + PORT + '/webhook/retell/llm');
   console.log('\n' + '='.repeat(60) + '\n');
+});
+
+// Handle WebSocket upgrades for Retell LLM
+server.on('upgrade', (request, socket, head) => {
+  const pathname = new URL(request.url, `http://${request.headers.host}`).pathname;
+
+  if (pathname === '/webhook/retell/llm') {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request);
+    });
+  } else {
+    socket.destroy();
+  }
 });
 
 // Graceful shutdown
