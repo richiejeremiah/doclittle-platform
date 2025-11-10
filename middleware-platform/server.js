@@ -5649,23 +5649,26 @@ app.post('/webhook/stripe', async (req, res) => {
               );
 
               // Try to fund wallet
-              const CircleService = require('./services/circle-service');
-              const fundResult = await CircleService.fundWallet(walletId, amount);
+              if (CircleService && CircleService.isAvailable()) {
+                const fundResult = await CircleService.fundWallet(walletId, amount);
 
-              if (fundResult.success) {
-                const updateStmt = db.db.prepare(`
-                  UPDATE circle_transfers 
-                  SET status = ?, completed_at = ?, circle_transfer_id = ?
-                  WHERE circle_transfer_id = ?
-                `);
-                updateStmt.run(
-                  'completed',
-                  new Date().toISOString(),
-                  fundResult.transferId || paymentIntent.id,
-                  paymentIntent.id
-                );
+                if (fundResult.success) {
+                  const updateStmt = db.db.prepare(`
+                    UPDATE circle_transfers 
+                    SET status = ?, completed_at = ?, circle_transfer_id = ?
+                    WHERE circle_transfer_id = ?
+                  `);
+                  updateStmt.run(
+                    'completed',
+                    new Date().toISOString(),
+                    fundResult.transferId || paymentIntent.id,
+                    paymentIntent.id
+                  );
 
-                console.log(`✅ Wallet deposit created and completed from webhook`);
+                  console.log(`✅ Wallet deposit created and completed from webhook`);
+                }
+              } else {
+                console.warn('⚠️  Circle service not available - wallet deposit will remain pending');
               }
             }
           } catch (error) {
