@@ -18,6 +18,12 @@ yarn-error.log*
 middleware-platform/*.db
 merchant-shop/*.db
 
+# Recovery files and secrets
+*recovery*.json
+*recovery*.dat
+circle-entity-secret*.json
+recovery_file*.dat
+
 # Logs
 logs/
 *.log

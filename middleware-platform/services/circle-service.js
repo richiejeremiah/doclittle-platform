@@ -470,6 +470,85 @@ class CircleService {
     }
 
     /**
+     * Fund wallet with test USDC (Sandbox only)
+     * For sandbox/testnet, we'll transfer from a system wallet
+     * @param {string} walletId - Target wallet ID to fund
+     * @param {number} amount - Amount in USDC to transfer
+     * @returns {Promise<Object>} Transfer result
+     */
+    async fundWallet(walletId, amount) {
+        if (!this.isAvailable()) {
+            return {
+                success: false,
+                error: 'Circle SDK not available or entity secret not configured'
+            };
+        }
+
+        try {
+            // For sandbox, we need a system/funding wallet that has test USDC
+            // First, check if we have a system wallet, or create one
+            const walletSetId = process.env.CIRCLE_WALLET_SET_ID;
+            if (!walletSetId) {
+                return {
+                    success: false,
+                    error: 'CIRCLE_WALLET_SET_ID not configured. Cannot fund wallet.'
+                };
+            }
+
+            // Get or create system funding wallet
+            // In sandbox, we'll use a system wallet that we manually fund via Circle Console
+            // or use Circle's testnet faucet
+            const systemWalletId = process.env.CIRCLE_SYSTEM_WALLET_ID;
+            
+            if (!systemWalletId) {
+                // Try to find existing system wallet in wallet set
+                const walletsResult = await this.listWallets(walletSetId);
+                const systemWallet = walletsResult.wallets?.find(w => 
+                    w.metadata?.description?.includes('system') || 
+                    w.metadata?.description?.includes('funding')
+                );
+                
+                if (systemWallet) {
+                    // Use existing system wallet
+                    const foundSystemWalletId = systemWallet.walletId || systemWallet.id;
+                    console.log(`✅ Found system wallet: ${foundSystemWalletId}`);
+                    
+                    // Transfer from system wallet to target wallet
+                    return await this.createTransfer({
+                        fromWalletId: foundSystemWalletId,
+                        toWalletId: walletId,
+                        amount: amount,
+                        currency: 'USDC',
+                        description: `Test deposit of ${amount} USDC`
+                    });
+                } else {
+                    return {
+                        success: false,
+                        error: 'System funding wallet not found. Please create a system wallet and fund it with test USDC via Circle Console, or set CIRCLE_SYSTEM_WALLET_ID in .env'
+                    };
+                }
+            }
+
+            // Transfer from system wallet to target wallet
+            return await this.createTransfer({
+                fromWalletId: systemWalletId,
+                toWalletId: walletId,
+                amount: amount,
+                currency: 'USDC',
+                description: `Test deposit of ${amount} USDC`
+            });
+
+        } catch (error) {
+            console.error('❌ Circle SDK Error - Fund Wallet:', error.message);
+            return {
+                success: false,
+                error: error.message || 'Failed to fund wallet',
+                details: error.response?.data || error
+            };
+        }
+    }
+
+    /**
      * Verify webhook signature
      * @param {string} signature - Webhook signature from headers
      * @param {string} payload - Webhook payload

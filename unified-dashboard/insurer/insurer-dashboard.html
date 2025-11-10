@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insurer Dashboard - Medical Coding Assistant</title>
+    <link rel="stylesheet" href="../assets/css/global.css">
+    <script src="../assets/js/config.js"></script>
+    <style>
+        :root {
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --primary-light: #3b82f6;
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+            background: #f7fafc;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .sidebar-logo {
+            font-size: 32px;
+            line-height: 1;
+            letter-spacing: -3px;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-logo .doc {
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+        }
+
+        .sidebar-logo .little {
+            font-family: 'Verdana', Geneva, sans-serif;
+            font-weight: 700;
+        }
+
+        .sidebar-subtitle {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-top: 4px;
+        }
+
+        .sidebar-nav {
+            padding: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--gray-700);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+            text-decoration: none;
+        }
+
+        .nav-item:hover {
+            background: var(--gray-50);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--gray-200);
+            position: absolute;
+            bottom: 0;
+            width: 260px;
+            background: white;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: var(--gray-100);
+        }
+
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            padding: 32px;
+        }
+
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            font-size: 16px;
+            color: var(--gray-600);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .stat-title {
+            font-size: 14px;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-icon {
+            font-size: 24px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .card-icon {
+            font-size: 24px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--gray-500);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .status-submitted {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .status-pending {
+            background: #fed7aa;
+            color: #9a3412;
+        }
+        
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <span class="doc">Doc</span><span class="little">Little</span>.
+                </div>
+                <div class="sidebar-subtitle">Medical Coding Assistant</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="insurer-dashboard.html" class="nav-item active">
+                    <span class="nav-icon">🏠</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#claims" class="nav-item">
+                    <span class="nav-icon">📋</span>
+                    <span>Claims Review</span>
+                </a>
+                <a href="#payers" class="nav-item">
+                    <span class="nav-icon">🏢</span>
+                    <span>Payers</span>
+                </a>
+                <a href="#analytics" class="nav-item">
+                    <span class="nav-icon">📊</span>
+                    <span>Analytics</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">I</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">Insurer</div>
+                        <div class="user-role">Insurer Account</div>
+                    </div>
+                    <button class="logout-btn" onclick="logout()" title="Logout">🚪</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Insurer Dashboard</h1>
+                <p class="page-subtitle">Welcome! Review and manage insurance claims</p>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Pending Claims</span>
+                        <span class="stat-icon">📋</span>
+                    </div>
+                    <div class="stat-value" id="pendingClaims">0</div>
+                    <div class="stat-change">Awaiting review</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Approved Claims</span>
+                        <span class="stat-icon">✅</span>
+                    </div>
+                    <div class="stat-value" id="approvedClaims">0</div>
+                    <div class="stat-change">This month</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Total Amount</span>
+                        <span class="stat-icon">💰</span>
+                    </div>
+                    <div class="stat-value" id="totalAmount">$0</div>
+                    <div class="stat-change">Processed</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-title">Payers</span>
+                        <span class="stat-icon">🏢</span>
+                    </div>
+                    <div class="stat-value" id="totalPayers">0</div>
+                    <div class="stat-change">Active</div>
+                </div>
+            </div>
+
+            <!-- Claims Review Section -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <div class="card-title">Claims Review</div>
+                    <div class="card-icon">📋</div>
+                </div>
+                <div id="claimsContent">
+                    <div class="empty-state">
+                        <p>No claims to review</p>
+                        <p style="font-size: 12px; color: var(--gray-500); margin-top: 8px;">
+                            Claims will appear here when submitted by healthcare providers
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = window.API_BASE || 'http://localhost:4000';
+
+        // Check authentication
+        if (sessionStorage.getItem('authenticated') !== 'true') {
+            window.location.href = '../login.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserInfo();
+            loadDashboardData();
+        });
+
+        function loadUserInfo() {
+            const userData = JSON.parse(sessionStorage.getItem('user') || '{}');
+            if (userData.name) {
+                document.getElementById('userName').textContent = userData.name;
+                document.getElementById('userAvatar').textContent = userData.name.charAt(0).toUpperCase();
+            }
+        }
+
+        async function loadDashboardData() {
+            try {
+                // Load all claims data
+                const response = await fetch(`${API_BASE}/api/admin/insurance/claims`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.claims) {
+                        updateStats(data.claims);
+                        
+                        // Filter to show only submitted/pending claims for approval
+                        const pendingClaims = data.claims.filter(c => 
+                            c.status === 'submitted' || c.status === 'pending' || c.status === 'draft'
+                        ).sort((a, b) => {
+                            // Sort by date, most recent first
+                            const dateA = new Date(a.submitted_at || a.created_at);
+                            const dateB = new Date(b.submitted_at || b.created_at);
+                            return dateB - dateA;
+                        });
+                        
+                        displayClaims(pendingClaims);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+
+        function updateStats(claims) {
+            const pending = claims.filter(c => c.status === 'submitted' || c.status === 'pending').length;
+            const approved = claims.filter(c => c.status === 'approved' || c.status === 'paid').length;
+            const totalApproved = claims
+                .filter(c => c.status === 'approved' || c.status === 'paid')
+                .reduce((sum, c) => sum + (parseFloat(c.total_amount) || 0), 0);
+
+            document.getElementById('pendingClaims').textContent = pending;
+            document.getElementById('approvedClaims').textContent = approved;
+            document.getElementById('totalAmount').textContent = `$${totalApproved.toFixed(2)}`;
+        }
+
+        async function displayClaims(claims) {
+            const container = document.getElementById('claimsContent');
+            
+            if (claims.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p>No claims pending approval</p>
+                        <p style="font-size: 12px; color: var(--gray-500); margin-top: 8px;">
+                            Claims will appear here when submitted by healthcare providers
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Fetch patient names for claims
+            const claimsWithPatientNames = await Promise.all(claims.map(async (claim) => {
+                let patientName = 'Unknown Patient';
+                if (claim.patient_id) {
+                    try {
+                        const patientResponse = await fetch(`${API_BASE}/api/fhir/Patient/${claim.patient_id}`);
+                        if (patientResponse.ok) {
+                            const patientData = await patientResponse.json();
+                            if (patientData.success && patientData.patient) {
+                                const name = patientData.patient.name?.[0];
+                                if (name) {
+                                    patientName = `${(name.given || []).join(' ')} ${name.family || ''}`.trim();
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Could not fetch patient name:', e);
+                    }
+                }
+                return { ...claim, patientName };
+            }));
+
+            container.innerHTML = `
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid var(--gray-200); background: var(--gray-50);">
+                                <th style="padding: 12px; text-align: left; font-weight: 600; color: var(--gray-700);">Claim ID</th>
+                                <th style="padding: 12px; text-align: left; font-weight: 600; color: var(--gray-700);">Patient</th>
+                                <th style="padding: 12px; text-align: left; font-weight: 600; color: var(--gray-700);">Amount</th>
+                                <th style="padding: 12px; text-align: left; font-weight: 600; color: var(--gray-700);">Status</th>
+                                <th style="padding: 12px; text-align: left; font-weight: 600; color: var(--gray-700);">Date</th>
+                                <th style="padding: 12px; text-align: left; font-weight: 600; color: var(--gray-700);">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${claimsWithPatientNames.map(claim => {
+                                const date = new Date(claim.submitted_at || claim.created_at).toLocaleDateString();
+                                const amount = parseFloat(claim.total_amount) || 0;
+                                const status = claim.status || 'pending';
+                                const statusDisplay = status === 'submitted' ? 'Waiting Approval' : 
+                                                     status === 'pending' ? 'Pending' : 
+                                                     status === 'draft' ? 'Draft' : status;
+                                const statusClass = status === 'submitted' ? 'status-submitted' : 
+                                                   status === 'pending' ? 'status-pending' : 
+                                                   status === 'approved' ? 'status-approved' : 
+                                                   status === 'paid' ? 'status-completed' : 'status-pending';
+                                const canApprove = status === 'submitted' || status === 'pending';
+                                
+                                return `
+                                    <tr style="border-bottom: 1px solid var(--gray-200);">
+                                        <td style="padding: 12px; font-family: monospace; font-size: 12px;">${claim.id.substring(0, 20)}...</td>
+                                        <td style="padding: 12px;">${claim.patientName || claim.patient_id || 'N/A'}</td>
+                                        <td style="padding: 12px; font-weight: 600;">$${amount.toFixed(2)}</td>
+                                        <td style="padding: 12px;">
+                                            <span class="status-badge ${statusClass}" style="padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                                                ${statusDisplay}
+                                            </span>
+                                        </td>
+                                        <td style="padding: 12px; color: var(--gray-600);">${date}</td>
+                                        <td style="padding: 12px;">
+                                            <div style="display: flex; gap: 8px;">
+                                                <button class="btn btn-primary" onclick="reviewClaim('${claim.id}')" 
+                                                    style="font-size: 12px; padding: 6px 12px; background: var(--primary);">
+                                                    View
+                                                </button>
+                                                ${canApprove ? `
+                                                <button class="btn" onclick="approveClaim('${claim.id}')" 
+                                                    style="font-size: 12px; padding: 6px 12px; background: #10b981; color: white; border: none;">
+                                                    Approve
+                                                </button>
+                                                ` : ''}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        async function approveClaim(claimId) {
+            if (!confirm(`Approve claim ${claimId} and process payment?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/claims/${claimId}/approve-payment`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert(`✅ Claim approved! Payment of $${result.amount.toFixed(2)} processed.${result.deductibleUsed ? ` Deductible used: $${result.deductibleUsed.toFixed(2)}` : ''}`);
+                    // Reload dashboard
+                    loadDashboardData();
+                } else {
+                    alert('❌ Error: ' + (result.error || 'Failed to approve claim'));
+                }
+            } catch (error) {
+                console.error('Error approving claim:', error);
+                alert('❌ Error approving claim: ' + error.message);
+            }
+        }
+
+        function reviewClaim(claimId) {
+            // Show claim details in a modal or navigate to claim details page
+            showClaimDetails(claimId);
+        }
+        
+        async function showClaimDetails(claimId) {
+            try {
+                // Fetch claim details
+                const response = await fetch(`${API_BASE}/api/claims/${claimId}`);
+                if (!response.ok) {
+                    alert('Failed to load claim details');
+                    return;
+                }
+                
+                const data = await response.json();
+                if (data.success && data.claim) {
+                    displayClaimModal(data.claim, data.eob, data.diagnosisCodes);
+                } else {
+                    alert('Failed to load claim details: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error loading claim details:', error);
+                alert('Error loading claim details: ' + error.message);
+            }
+        }
+        
+        function displayClaimModal(claim, eob, diagnosisCodes) {
+            const eobTotals = eob?.totals || {};
+            const eobLineItems = eob?.lineItems || [];
+            const eligibility = claim.eligibility || {};
+            
+            // Create modal HTML
+            const modalHTML = `
+                <div id="claimModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;">
+                    <div style="background: white; border-radius: 12px; max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                        <div style="padding: 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10;">
+                            <h2 style="margin: 0; font-size: 24px; color: #1a202c;">Claim Details - ${claim.id}</h2>
+                            <button onclick="closeClaimModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #718096;">&times;</button>
+                        </div>
+                        <div style="padding: 24px;">
+                            <!-- Patient Info -->
+                            <div style="margin-bottom: 24px;">
+                                <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #2d3748;">Patient Information</h3>
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                                    <div>
+                                        <div style="font-size: 12px; color: #718096; margin-bottom: 4px;">Patient Name</div>
+                                        <div style="font-weight: 600;">${claim.patientName || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 12px; color: #718096; margin-bottom: 4px;">Member ID</div>
+                                        <div style="font-weight: 600;">${claim.subscriberId || claim.member_id || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 12px; color: #718096; margin-bottom: 4px;">Insurer</div>
+                                        <div style="font-weight: 600;">${claim.payerName || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 12px; color: #718096; margin-bottom: 4px;">Plan</div>
+                                        <div style="font-weight: 600;">${claim.planSummary || 'N/A'}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Financial Summary -->
+                            <div style="margin-bottom: 24px; padding: 20px; background: #f7fafc; border-radius: 8px;">
+                                <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #2d3748;">Financial Summary</h3>
+                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                                    <div>
+                                        <div style="font-size: 12px; color: #718096; margin-bottom: 4px;">Amount Billed</div>
+                                        <div style="font-size: 24px; font-weight: 700; color: #1a202c;">$${(eobTotals.amountBilled || claim.total_amount || 0).toFixed(2)}</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 12px; color: #718096; margin-bottom: 4px;">Plan Paid</div>
+                                        <div style="font-size: 24px; font-weight: 700; color: #10b981;">$${(eobTotals.planPaid || 0).toFixed(2)}</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 12px; color: #718096; margin-bottom: 4px;">Patient Owe</div>
+                                        <div style="font-size: 24px; font-weight: 700; color: #1e40af;">$${(eobTotals.whatYouOwe || claim.total_amount || 0).toFixed(2)}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Service Line Items -->
+                            ${eobLineItems.length > 0 ? `
+                            <div style="margin-bottom: 24px;">
+                                <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #2d3748;">Service Line Items</h3>
+                                <div style="overflow-x: auto;">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                                        <thead>
+                                            <tr style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
+                                                <th style="padding: 10px; text-align: left; font-weight: 600; color: #4a5568;">Service</th>
+                                                <th style="padding: 10px; text-align: right; font-weight: 600; color: #4a5568;">Billed</th>
+                                                <th style="padding: 10px; text-align: right; font-weight: 600; color: #4a5568;">Allowed</th>
+                                                <th style="padding: 10px; text-align: right; font-weight: 600; color: #4a5568;">Plan Paid</th>
+                                                <th style="padding: 10px; text-align: right; font-weight: 600; color: #4a5568;">Patient Owe</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${eobLineItems.map(item => `
+                                                <tr style="border-bottom: 1px solid #e2e8f0;">
+                                                    <td style="padding: 10px;">
+                                                        <div style="font-weight: 600;">${item.cptCode || item.code || 'N/A'}</div>
+                                                        <div style="font-size: 12px; color: #718096;">${(item.typeOfService || item.description || '').substring(0, 50)}</div>
+                                                    </td>
+                                                    <td style="padding: 10px; text-align: right;">$${(item.amountBilled || 0).toFixed(2)}</td>
+                                                    <td style="padding: 10px; text-align: right;">$${(item.allowedAmount || 0).toFixed(2)}</td>
+                                                    <td style="padding: 10px; text-align: right; color: #10b981;">$${(item.planPaid || 0).toFixed(2)}</td>
+                                                    <td style="padding: 10px; text-align: right; color: #1e40af;">$${(item.whatYouOwe || 0).toFixed(2)}</td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr style="background: #f7fafc; border-top: 2px solid #e2e8f0; font-weight: 700;">
+                                                <td style="padding: 10px;">Total</td>
+                                                <td style="padding: 10px; text-align: right;">$${(eobTotals.amountBilled || 0).toFixed(2)}</td>
+                                                <td style="padding: 10px; text-align: right;">$${(eobTotals.allowedAmount || 0).toFixed(2)}</td>
+                                                <td style="padding: 10px; text-align: right; color: #10b981;">$${(eobTotals.planPaid || 0).toFixed(2)}</td>
+                                                <td style="padding: 10px; text-align: right; color: #1e40af;">$${(eobTotals.whatYouOwe || 0).toFixed(2)}</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                            ` : ''}
+                            
+                            <!-- Diagnosis Codes -->
+                            ${diagnosisCodes && diagnosisCodes.length > 0 ? `
+                            <div style="margin-bottom: 24px;">
+                                <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #2d3748;">Diagnosis Codes</h3>
+                                <div style="display: flex; flex-wrap: gap: 8px;">
+                                    ${diagnosisCodes.map(diag => `
+                                        <div style="padding: 8px 12px; background: #e6fffa; border: 1px solid #38b2ac; border-radius: 6px; font-size: 13px;">
+                                            <strong>${diag.code}:</strong> ${diag.description || 'N/A'}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            ` : ''}
+                            
+                            <!-- Action Buttons -->
+                            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; padding-top: 24px; border-top: 1px solid #e2e8f0;">
+                                <button onclick="closeClaimModal()" style="padding: 10px 20px; background: #e2e8f0; color: #4a5568; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Close</button>
+                                ${claim.status === 'submitted' || claim.status === 'pending' ? `
+                                <button onclick="approveClaimFromModal('${claim.id}')" style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Approve & Pay</button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Insert modal into page
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+        
+        function closeClaimModal() {
+            const modal = document.getElementById('claimModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        async function approveClaimFromModal(claimId) {
+            closeClaimModal();
+            await approveClaim(claimId);
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = '../login.html';
+        }
+    </script>
+</body>
+
+</html>
+

@@ -30,26 +30,6 @@ db.exec(`
   );
 `);
 
-// Seed initial products if empty
-const productCount = db.prepare('SELECT COUNT(*) as count FROM products').get();
-
-if (productCount.count === 0) {
-    const insertProduct = db.prepare(`
-    INSERT INTO products (id, name, description, price, inventory, image_url, category)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-
-    const products = [
-        ['VIT-D3-5000', 'Vitamin D3 5000 IU', 'High-potency vitamin D supplement for bone and immune health. 120 softgels.', 24.99, 100, 'https://via.placeholder.com/300x300?text=Vitamin+D3', 'vitamins'],
-        ['OMEGA-3-1000', 'Omega-3 Fish Oil 1000mg', 'Premium fish oil with EPA and DHA for heart and brain health. 180 softgels.', 29.99, 150, 'https://via.placeholder.com/300x300?text=Omega-3', 'supplements'],
-        ['PROB-50B', 'Probiotic 50 Billion CFU', 'Multi-strain probiotic for digestive and immune support. 60 capsules.', 34.99, 80, 'https://via.placeholder.com/300x300?text=Probiotic', 'probiotics'],
-        ['MAG-400', 'Magnesium Glycinate 400mg', 'Highly absorbable magnesium for muscle relaxation and sleep. 120 capsules.', 19.99, 120, 'https://via.placeholder.com/300x300?text=Magnesium', 'minerals'],
-    ];
-
-    products.forEach(product => insertProduct.run(...product));
-    console.log('✅ Seeded 4 products');
-}
-
 module.exports = {
     // Products
     getAllProducts: () => db.prepare('SELECT * FROM products').all(),

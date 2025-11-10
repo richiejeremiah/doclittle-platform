@@ -504,11 +504,22 @@
                 if (data.success) {
                     sessionStorage.setItem('authenticated', 'true');
                     sessionStorage.setItem('user', JSON.stringify(data.user));
-                    // Redirect patient accounts to patient dashboard
-                    if (data.user.email === 'patient@doclittle.com' || data.user.role === 'patient') {
-                        window.location.href = 'business/patient-dashboard.html';
+                    
+                    // Debug logging
+                    console.log('Login successful. User data:', data.user);
+                    console.log('User role:', data.user.role);
+                    console.log('User email:', data.user.email);
+                    
+                    // Redirect based on user role and email (check email first for specific accounts)
+                    if (data.user.email === 'insurer@doclittle.com' || data.user.role === 'insurer_admin' || data.user.role === 'insurer') {
+                        console.log('Redirecting to insurer dashboard...');
+                        window.location.href = 'insurer/insurer-dashboard.html';
+                    } else if (data.user.email === 'patient@doclittle.com' || data.user.role === 'patient') {
+                        console.log('Redirecting to patient dashboard...');
+                        window.location.href = 'patients/patient-dashboard.html';
                     } else {
-                        window.location.href = 'business/dashboard.html';
+                        console.log('Redirecting to business dashboard...');
+                        window.location.href = 'business/business-dashboard.html';
                     }
                 } else {
                     throw new Error(data.error || 'Login failed');

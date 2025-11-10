@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Wallet - Patient Portal</title>
+    <link rel="stylesheet" href="../assets/css/global.css">
+    <script src="../assets/js/config.js"></script>
+    <style>
+        :root {
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --primary-light: #3b82f6;
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+            background: #f7fafc;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .sidebar-logo {
+            font-size: 32px;
+            line-height: 1;
+            letter-spacing: -3px;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-logo .doc {
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+        }
+
+        .sidebar-logo .little {
+            font-family: 'Verdana', Geneva, sans-serif;
+            font-weight: 700;
+        }
+
+        .sidebar-subtitle {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-top: 4px;
+        }
+
+        .sidebar-nav {
+            padding: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--gray-700);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+            text-decoration: none;
+        }
+
+        .nav-item:hover {
+            background: var(--gray-50);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--gray-200);
+            position: absolute;
+            bottom: 0;
+            width: 260px;
+            background: white;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            padding: 32px;
+            flex: 1;
+        }
+
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            font-size: 16px;
+            color: var(--gray-600);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .card-icon {
+            font-size: 24px;
+        }
+
+        .balance-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 12px;
+            padding: 32px;
+            color: white;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .balance-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .balance-amount {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 24px;
+        }
+
+        .balance-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .wallet-info {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .wallet-info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .wallet-info-label {
+            color: var(--gray-600);
+        }
+
+        .wallet-info-value {
+            color: var(--gray-900);
+            font-weight: 600;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-300);
+        }
+
+        .btn-white {
+            background: white;
+            color: var(--primary);
+        }
+
+        .btn-white:hover {
+            background: var(--gray-50);
+        }
+
+        .btn-outline {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .insurance-card {
+            background: white;
+            border: 2px solid var(--primary-light);
+        }
+
+        .insurance-card .card-title {
+            color: var(--gray-900);
+        }
+
+        .insurance-info {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .insurance-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .insurance-item:last-child {
+            border-bottom: none;
+        }
+
+        .insurance-label {
+            color: var(--gray-600);
+            font-size: 13px;
+        }
+
+        .insurance-value {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--gray-900);
+        }
+
+        .transactions-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .transactions-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .transactions-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .filter-select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--gray-300);
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid var(--gray-200);
+            transition: background 0.2s;
+        }
+
+        .transaction-item:hover {
+            background: var(--gray-50);
+        }
+
+        .transaction-item:last-child {
+            border-bottom: none;
+        }
+
+        .transaction-info {
+            flex: 1;
+        }
+
+        .transaction-title {
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .transaction-date {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .transaction-amount {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .transaction-amount.positive {
+            color: var(--success);
+        }
+
+        .transaction-amount.negative {
+            color: var(--danger);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 48px;
+            color: var(--gray-600);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px;
+            color: var(--gray-500);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--gray-500);
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .close-btn:hover {
+            background: var(--gray-100);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--gray-900);
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--gray-300);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <span class="doc">Doc</span><span class="little">Little</span>.
+                </div>
+                <div class="sidebar-subtitle">Medical Coding Assistant</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="patient-dashboard.html" class="nav-item">
+                    <span class="nav-icon">🏠</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#benefits" class="nav-item" onclick="window.location.href='patient-dashboard.html#benefits'; return false;">
+                    <span class="nav-icon">🏥</span>
+                    <span>My Benefits</span>
+                </a>
+                <a href="wallet.html" class="nav-item active">
+                    <span class="nav-icon">💰</span>
+                    <span>My Wallet</span>
+                </a>
+                <a href="#claims" class="nav-item" onclick="window.location.href='patient-dashboard.html#claims'; return false;">
+                    <span class="nav-icon">💳</span>
+                    <span>Bills & Claims</span>
+                </a>
+                <a href="appointments.html" class="nav-item">
+                    <span class="nav-icon">📅</span>
+                    <span>Appointments</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">P</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">Patient</div>
+                        <div class="user-role">Patient</div>
+                    </div>
+                    <button class="logout-btn" onclick="logout()" title="Logout">
+                        🚪
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">My Wallet</h1>
+                <p class="page-subtitle">Manage your payments and view transaction history</p>
+            </div>
+
+            <!-- Balance Card -->
+            <div class="balance-card">
+                <div class="balance-label">Total Balance</div>
+                <div class="balance-amount" id="totalBalance">$0.00</div>
+                <div class="balance-actions">
+                    <button class="btn btn-white" onclick="showAddMoneyModal()">Add Money</button>
+                    <button class="btn btn-outline" onclick="showReceiveModal()">Receive</button>
+                </div>
+            </div>
+
+            <!-- Dashboard Grid -->
+            <div class="dashboard-grid">
+                <!-- Insurance Card -->
+                <div class="dashboard-card insurance-card" id="insuranceCard">
+                    <div class="card-header">
+                        <h3 class="card-title">Health Insurance</h3>
+                        <div class="card-icon">🏥</div>
+                    </div>
+                    <div class="insurance-info" id="insuranceInfo">
+                        <div class="loading">Loading insurance information...</div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats Card -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h3 class="card-title">This Month</h3>
+                        <div class="card-icon">📊</div>
+                    </div>
+                    <div style="margin-top: 16px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                            <span style="color: var(--gray-600); font-size: 14px;">Spent</span>
+                            <span style="font-weight: 600; color: var(--danger); font-size: 18px;" id="monthSpent">$0.00</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--gray-600); font-size: 14px;">Medical Services</span>
+                            <span style="font-weight: 600; color: var(--gray-900); font-size: 18px;" id="monthServices">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transactions Section -->
+            <div class="transactions-section">
+                <div class="transactions-header">
+                    <h3>Payment History</h3>
+                    <select id="filterSelect" class="filter-select" onchange="loadTransactions()">
+                        <option value="all">All Transactions</option>
+                        <option value="medical">Medical Services</option>
+                        <option value="deposit">Deposits</option>
+                    </select>
+                </div>
+                <div id="transactionsList">
+                    <div class="loading">Loading transactions...</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Money Modal -->
+    <div id="addMoneyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Money</h2>
+                <button class="close-btn" onclick="closeAddMoneyModal()">&times;</button>
+            </div>
+            <form onsubmit="handleAddMoney(event)">
+                <div class="form-group">
+                    <label>Amount</label>
+                    <input type="number" id="addAmount" step="0.01" min="0.01" placeholder="0.00" required>
+                </div>
+                <div class="form-group">
+                    <label>Payment Method</label>
+                    <select id="paymentMethod">
+                        <option value="test">Test Deposit (Sandbox)</option>
+                        <option value="ach">Bank Transfer (ACH)</option>
+                        <option value="card">Credit/Debit Card</option>
+                        <option value="wire">Wire Transfer</option>
+                    </select>
+                </div>
+                <div style="padding: 16px; background: var(--gray-50); border-radius: 8px; margin-top: 16px; margin-bottom: 16px;">
+                    <p style="font-size: 13px; color: var(--gray-600); margin: 0 0 8px 0; font-weight: 600;">Funding Options:</p>
+                    <ul style="font-size: 12px; color: var(--gray-600); margin: 0; padding-left: 20px;">
+                        <li><strong>Bank Transfer (ACH):</strong> Direct transfer from your bank account to Circle wallet (1-3 business days)</li>
+                        <li><strong>Credit/Debit Card:</strong> Instant deposit (fees may apply)</li>
+                        <li><strong>Wire Transfer:</strong> Same-day transfer for large amounts</li>
+                        <li><strong>Test Deposit:</strong> For sandbox/testing only</li>
+                    </ul>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddMoneyModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Money</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Receive Modal -->
+    <div id="receiveModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Receive Money</h2>
+                <button class="close-btn" onclick="closeReceiveModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Wallet Address</label>
+                <input type="text" id="walletAddress" readonly style="background: var(--gray-50); font-family: monospace;">
+                <button type="button" onclick="copyWalletAddress()" class="btn btn-primary" style="margin-top: 8px; width: 100%;">Copy Address</button>
+            </div>
+            <div style="padding: 16px; background: var(--gray-50); border-radius: 8px; margin-top: 16px;">
+                <p style="font-size: 14px; color: var(--gray-600); margin: 0;">
+                    Share this wallet address to receive payments. Funds will appear in your wallet once the transaction is confirmed.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.API_BASE || 'http://localhost:4000';
+        let patientId = null;
+        let walletId = null;
+        const userData = JSON.parse(sessionStorage.getItem('user') || '{}');
+        const patientName = userData.name || userData.patientName || '';
+
+        function logout() {
+            sessionStorage.removeItem('authenticated');
+            sessionStorage.removeItem('user');
+            window.location.href = '../login.html';
+        }
+
+        // Get patient ID from session
+        async function initWallet() {
+            try {
+                if (!patientName) {
+                    console.error('Patient name is not available in the current session');
+                    document.getElementById('totalBalance').textContent = 'Add a patient profile to view wallet';
+                    return;
+                }
+
+                // Get patient by name
+                const response = await fetch(`${API_BASE}/fhir/Patient?name=${encodeURIComponent(patientName)}`);
+                const bundle = await response.json();
+                
+                if (bundle.entry && bundle.entry.length > 0) {
+                    patientId = bundle.entry[0].resource.id;
+                    await loadWallet();
+                    await loadInsurance();
+                    await loadTransactions();
+                } else {
+                    console.error('Patient not found');
+                    document.getElementById('totalBalance').textContent = 'Patient not found';
+                }
+            } catch (error) {
+                console.error('Error initializing wallet:', error);
+            }
+        }
+
+        async function loadWallet() {
+            try {
+                // Get or create wallet for patient
+                const response = await fetch(`${API_BASE}/api/circle/accounts/patient/${patientId}`);
+                if (!response.ok) {
+                    // Create wallet if it doesn't exist
+                    const createResponse = await fetch(`${API_BASE}/api/circle/wallets`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            entityType: 'patient',
+                            entityId: patientId,
+                            description: `Patient wallet for ${patientId}`
+                        })
+                    });
+                    
+                    if (createResponse.ok) {
+                        const data = await createResponse.json();
+                        walletId = data.walletId;
+                        await updateBalance();
+                    }
+                } else {
+                    const data = await response.json();
+                    walletId = data.account?.circle_wallet_id;
+                    await updateBalance();
+                }
+            } catch (error) {
+                console.error('Error loading wallet:', error);
+            }
+        }
+
+        async function updateBalance() {
+            if (!walletId) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/circle/wallets/${walletId}/balance`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.balances && data.balances.length > 0) {
+                        const usdcBalance = data.balances.find(b => b.token?.symbol === 'USDC') || data.balances[0];
+                        const amount = parseFloat(usdcBalance.amount || usdcBalance.balance || 0);
+                        document.getElementById('totalBalance').textContent = `$${amount.toFixed(2)}`;
+                    } else {
+                        document.getElementById('totalBalance').textContent = '$0.00';
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating balance:', error);
+            }
+        }
+
+        async function loadInsurance() {
+            try {
+                if (!patientName) {
+                    throw new Error('Patient name is not available in the current session');
+                }
+
+                const response = await fetch(`${API_BASE}/api/patient/benefits?patientName=${encodeURIComponent(patientName)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.insurance) {
+                        const insurance = data.insurance;
+                        document.getElementById('insuranceInfo').innerHTML = `
+                            <div class="insurance-item">
+                                <span class="insurance-label">Insurer</span>
+                                <span class="insurance-value">${insurance.payerName || 'N/A'}</span>
+                            </div>
+                            <div class="insurance-item">
+                                <span class="insurance-label">Member ID</span>
+                                <span class="insurance-value">${insurance.memberId || 'N/A'}</span>
+                            </div>
+                            <div class="insurance-item">
+                                <span class="insurance-label">Plan</span>
+                                <span class="insurance-value">${insurance.planName || 'N/A'}</span>
+                            </div>
+                            <div class="insurance-item">
+                                <span class="insurance-label">Deductible Remaining</span>
+                                <span class="insurance-value">$${(insurance.deductibleRemaining || 0).toFixed(2)}</span>
+                            </div>
+                        `;
+                    } else {
+                        document.getElementById('insuranceInfo').innerHTML = '<div style="color: var(--gray-600);">No insurance information available</div>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading insurance:', error);
+                document.getElementById('insuranceInfo').innerHTML = '<div style="color: var(--gray-600);">Error loading insurance information</div>';
+            }
+        }
+
+        async function loadTransactions() {
+            try {
+                const filter = document.getElementById('filterSelect').value;
+                const response = await fetch(`${API_BASE}/api/patient/wallet/transactions?patientId=${patientId}&filter=${filter}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayTransactions(data.transactions || []);
+                    updateMonthStats(data.transactions || []);
+                } else {
+                    document.getElementById('transactionsList').innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No transactions found</p></div>';
+                }
+            } catch (error) {
+                console.error('Error loading transactions:', error);
+                document.getElementById('transactionsList').innerHTML = '<div class="empty-state"><div class="empty-state-icon">❌</div><p>Error loading transactions</p></div>';
+            }
+        }
+
+        function displayTransactions(transactions) {
+            const container = document.getElementById('transactionsList');
+            
+            if (transactions.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No transactions yet</p></div>';
+                return;
+            }
+
+            container.innerHTML = transactions.map(tx => `
+                <div class="transaction-item">
+                    <div class="transaction-info">
+                        <div class="transaction-title">${tx.description || tx.type || 'Transaction'}</div>
+                        <div class="transaction-date">${new Date(tx.created_at || tx.date).toLocaleString()}</div>
+                    </div>
+                    <div class="transaction-amount ${tx.amount >= 0 ? 'positive' : 'negative'}">
+                        ${tx.amount >= 0 ? '+' : ''}$${Math.abs(tx.amount).toFixed(2)}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateMonthStats(transactions) {
+            const now = new Date();
+            const thisMonth = transactions.filter(tx => {
+                const txDate = new Date(tx.created_at || tx.date);
+                return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
+            });
+
+            const spent = thisMonth
+                .filter(tx => tx.amount < 0)
+                .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+            
+            const medicalServices = thisMonth.filter(tx => tx.type === 'medical' || tx.description?.toLowerCase().includes('claim')).length;
+
+            document.getElementById('monthSpent').textContent = `$${spent.toFixed(2)}`;
+            document.getElementById('monthServices').textContent = medicalServices;
+        }
+
+        function showAddMoneyModal() {
+            document.getElementById('addMoneyModal').classList.add('active');
+        }
+
+        function closeAddMoneyModal() {
+            document.getElementById('addMoneyModal').classList.remove('active');
+        }
+
+        async function handleAddMoney(event) {
+            event.preventDefault();
+            const amount = parseFloat(document.getElementById('addAmount').value);
+            const method = document.getElementById('paymentMethod').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/patient/wallet/deposit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        patientId: patientId,
+                        amount: amount,
+                        method: method
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    if (data.method === 'ach') {
+                        alert(`✅ ${data.message}\n\nYour ACH transfer has been initiated. You'll receive a notification when the funds are available in your wallet.`);
+                    } else if (data.method === 'wire') {
+                        alert(`✅ ${data.message}\n\nYour wire transfer has been initiated. Funds will be available same day.`);
+                    } else {
+                        alert(`✅ Successfully added $${amount.toFixed(2)} to your wallet!`);
+                    }
+                    closeAddMoneyModal();
+                    document.getElementById('addAmount').value = '';
+                    await updateBalance();
+                    await loadTransactions();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to add money'));
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        function showReceiveModal() {
+            if (walletId) {
+                document.getElementById('walletAddress').value = walletId;
+                document.getElementById('receiveModal').classList.add('active');
+            } else {
+                alert('Wallet not initialized. Please wait a moment and try again.');
+            }
+        }
+
+        function closeReceiveModal() {
+            document.getElementById('receiveModal').classList.remove('active');
+        }
+
+        function copyWalletAddress() {
+            const address = document.getElementById('walletAddress');
+            address.select();
+            document.execCommand('copy');
+            alert('Wallet address copied to clipboard!');
+        }
+
+        // Initialize on page load
+        initWallet();
+    </script>
+</body>
+
+</html>

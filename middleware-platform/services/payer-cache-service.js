@@ -25,10 +25,10 @@ class PayerCacheService {
   static async searchPayer(searchTerm) {
     try {
       console.log(`\n🔍 PAYER CACHE: Searching for "${searchTerm}"`);
-      
+
       // Step 1: Check database cache first (FREE)
       const cachedResults = db.searchPayersByName(searchTerm);
-      
+
       if (cachedResults && cachedResults.length > 0) {
         console.log(`✅ Found ${cachedResults.length} payer(s) in cache (no API call)`);
         return {
@@ -42,15 +42,49 @@ class PayerCacheService {
 
       // Step 2: Not in cache, fetch from Stedi (COSTS API CALL)
       console.log(`⚠️  Not in cache, fetching from Stedi API...`);
-      const stediResult = await InsuranceService.searchPayer(searchTerm);
-      
+      let stediResult;
+      try {
+        stediResult = await InsuranceService.searchPayer(searchTerm);
+      } catch (apiError) {
+        console.warn(`⚠️  Stedi API call failed: ${apiError.message}`);
+        // API failed - try fallback to known payers
+        const knownPayers = this._getKnownPayers();
+        const matchedPayer = knownPayers.find(p =>
+          p.payer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          searchTerm.toLowerCase().includes(p.payer_name.toLowerCase())
+        );
+
+        if (matchedPayer) {
+          console.log(`✅ Using known payer fallback due to API failure: ${matchedPayer.payer_name}`);
+          return {
+            success: true,
+            payers: [matchedPayer],
+            count: 1,
+            fromCache: false,
+            apiCallSaved: false,
+            fromFallback: true,
+            apiError: apiError.message
+          };
+        }
+
+        // No fallback match - return error
+        return {
+          success: false,
+          payers: [],
+          count: 0,
+          error: `Unable to connect to insurance database. ${apiError.message}`,
+          fromCache: false,
+          apiCallSaved: false
+        };
+      }
+
       if (stediResult.success && stediResult.payers.length > 0) {
         // Step 3: Cache the results for future use
         console.log(`💾 Caching ${stediResult.payers.length} payer(s) for future use...`);
         stediResult.payers.forEach(payer => {
           this._cachePayer(payer);
         });
-        
+
         return {
           ...stediResult,
           fromCache: false,
@@ -89,7 +123,7 @@ class PayerCacheService {
     try {
       // Step 1: Check cache first
       const cached = db.getPayerByPayerId(payerId);
-      
+
       if (cached) {
         console.log(`✅ Found payer ${payerId} in cache (no API call)`);
         return {
@@ -138,8 +172,45 @@ class PayerCacheService {
       console.log(`   Member ID: ${memberId}`);
 
       // Step 1: Search for payer in cache (or Stedi if not cached)
-      const searchResult = await this.searchPayer(payerName);
-      
+      let searchResult = await this.searchPayer(payerName);
+
+      // If API call failed, try fallback to known payers
+      if (!searchResult.success || searchResult.payers.length === 0) {
+        console.log(`⚠️  Payer search failed or returned no results. Trying fallback...`);
+
+        // Fallback: Check database cache directly
+        const cachedPayers = db.searchPayersByName(payerName);
+        if (cachedPayers && cachedPayers.length > 0) {
+          console.log(`✅ Found ${cachedPayers.length} payer(s) in database cache (fallback)`);
+          searchResult = {
+            success: true,
+            payers: cachedPayers,
+            count: cachedPayers.length,
+            fromCache: true,
+            apiCallSaved: true
+          };
+        } else {
+          // Final fallback: Use known common payers for demo
+          const knownPayers = this._getKnownPayers();
+          const matchedPayer = knownPayers.find(p =>
+            p.payer_name.toLowerCase().includes(payerName.toLowerCase()) ||
+            payerName.toLowerCase().includes(p.payer_name.toLowerCase())
+          );
+
+          if (matchedPayer) {
+            console.log(`✅ Using known payer fallback: ${matchedPayer.payer_name}`);
+            searchResult = {
+              success: true,
+              payers: [matchedPayer],
+              count: 1,
+              fromCache: false,
+              apiCallSaved: false,
+              fromFallback: true
+            };
+          }
+        }
+      }
+
       if (!searchResult.success || searchResult.payers.length === 0) {
         return {
           success: false,
@@ -169,7 +240,7 @@ class PayerCacheService {
 
       // Step 3: Single match - confirm
       const payer = searchResult.payers[0];
-      
+
       return {
         success: true,
         confirmed: true,
@@ -199,10 +270,10 @@ class PayerCacheService {
   static async syncPayerList(limit = 1000) {
     try {
       console.log(`\n🔄 PAYER CACHE: Syncing payer list from Stedi (limit: ${limit})`);
-      
+
       // Fetch from Stedi
       const result = await InsuranceService.getAllPayers(limit);
-      
+
       if (!result.success || result.payers.length === 0) {
         return {
           success: false,
@@ -242,6 +313,40 @@ class PayerCacheService {
   }
 
   /**
+   * Get known/common payers for fallback when API is unavailable
+   * @private
+   */
+  static _getKnownPayers() {
+    return [
+      {
+        payer_id: 'CIGNA',
+        payer_name: 'Cigna',
+        aliases: JSON.stringify(['CIGNA', 'Cigna Health', 'Cigna Healthcare'])
+      },
+      {
+        payer_id: 'AETNA',
+        payer_name: 'Aetna',
+        aliases: JSON.stringify(['AETNA', 'Aetna Health', 'Aetna Inc'])
+      },
+      {
+        payer_id: 'BCBS',
+        payer_name: 'Blue Cross Blue Shield',
+        aliases: JSON.stringify(['BCBS', 'Blue Cross', 'Blue Shield', 'Anthem'])
+      },
+      {
+        payer_id: 'UNITED',
+        payer_name: 'UnitedHealthcare',
+        aliases: JSON.stringify(['UnitedHealth', 'UHC', 'United Health'])
+      },
+      {
+        payer_id: 'HUMANA',
+        payer_name: 'Humana',
+        aliases: JSON.stringify(['HUMANA', 'Humana Inc'])
+      }
+    ];
+  }
+
+  /**
    * Cache a single payer (private helper)
    * @private
    */
@@ -249,7 +354,7 @@ class PayerCacheService {
     try {
       const payerId = payer.payer_id || payer.id || payer.payerId;
       const payerName = payer.payer_name || payer.payerName || payer.name || 'Unknown';
-      
+
       if (!payerId) {
         console.warn('⚠️  Cannot cache payer: missing payer_id');
         return;
@@ -277,7 +382,7 @@ class PayerCacheService {
   static getCacheStats() {
     const count = db.getPayerCacheCount();
     const allPayers = db.getAllCachedPayers(100);
-    
+
     return {
       totalCached: count,
       samplePayers: allPayers.slice(0, 10).map(p => ({

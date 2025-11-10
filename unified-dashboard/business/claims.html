@@ -330,8 +330,8 @@
         }
 
         .status-submitted {
-            background: #fff3cd;
-            color: #856404;
+            background: #dbeafe;
+            color: #1e40af;
         }
 
         .status-approved {
@@ -345,8 +345,8 @@
         }
 
         .status-pending {
-            background: #fff3cd;
-            color: #856404;
+            background: #fed7aa;
+            color: #9a3412;
         }
 
         .status-processing {
@@ -513,6 +513,7 @@
             const patientName = claim.patientName || 'Unknown Patient';
             const subscriberId = claim.subscriberId || claim.member_id || 'N/A';
             const planSummary = claim.planSummary || claim.eligibility?.plan_summary || 'N/A';
+            const payerName = claim.payerName || claim.eligibility?.payer_name || 'N/A';
 
             // Use REAL EOB data from backend (calculated from Stedi eligibility data)
             const eob = claim.eob || {};
@@ -552,19 +553,18 @@
 
             // Payment action buttons (only show for appropriate statuses)
             let paymentActions = '';
-            if (claim.status === 'draft' || claim.status === 'submitted') {
+            if (claim.status === 'draft') {
                 paymentActions = `
                     <button onclick="submitClaimForPayment('${claim.id}')" 
                         style="padding: 10px 20px; background: #1e40af; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-left: 12px;">
                         Submit for Payment
                     </button>
                 `;
-            } else if (claim.status === 'pending_approval') {
+            } else if (claim.status === 'submitted') {
                 paymentActions = `
-                    <button onclick="approveClaimPayment('${claim.id}')" 
-                        style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-left: 12px;">
-                        Approve & Pay
-                    </button>
+                    <div style="padding: 8px 16px; background: #e5e7eb; border: 1px solid #9ca3af; border-radius: 6px; color: #374151; font-size: 14px; font-weight: 600; margin-left: 12px;">
+                        🔒 Locked
+                    </div>
                 `;
             }
 
@@ -600,8 +600,8 @@
                             <div class="eob-info-value">${subscriberId}</div>
                         </div>
                         <div class="eob-info-item">
-                            <div class="eob-info-label">Group Number</div>
-                            <div class="eob-info-value">${claim.groupNumber || eligibility.group_number || 'N/A'}</div>
+                            <div class="eob-info-label">Insurer</div>
+                            <div class="eob-info-value">${payerName || claim.payerName || 'N/A'}</div>
                         </div>
                         <div class="eob-info-item">
                             <div class="eob-info-label">Plan</div>
@@ -631,16 +631,16 @@
                     <table class="eob-table">
                         <thead>
                             <tr>
-                                <th>A<br>Date of Service<br>Type of Service</th>
-                                <th>B<br>Amount Billed</th>
-                                <th>C<br>Allowed Amount</th>
-                                <th>D<br>Your Plan Paid</th>
-                                <th>E<br>Your Other Insurance Paid</th>
-                                <th>F<br>Copay</th>
-                                <th>G<br>Coinsurance</th>
-                                <th>H<br>Deductible</th>
-                                <th>I<br>Amount Not Covered</th>
-                                <th>J<br>What You Owe</th>
+                                <th>Service</th>
+                                <th>Amount Billed</th>
+                                <th>Allowed Amount</th>
+                                <th>Your Plan Paid</th>
+                                <th>Your Other Insurance Paid</th>
+                                <th>Copay</th>
+                                <th>Coinsurance</th>
+                                <th>Deductible</th>
+                                <th>Amount Not Covered</th>
+                                <th>What You Owe</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -728,6 +728,7 @@
             if (!confirm('Submit this claim for payment approval?')) return;
 
             try {
+                console.log(`Submitting claim ${claimId} for payment...`);
                 const response = await fetch(`${API_BASE}/api/claims/${claimId}/submit-payment`, {
                     method: 'POST',
                     headers: {
@@ -735,7 +736,25 @@
                     }
                 });
 
+                console.log('Response status:', response.status, response.statusText);
+                
+                // Check if response is OK before parsing JSON
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(errorText);
+                    } catch (e) {
+                        errorData = { error: errorText || `HTTP ${response.status}: ${response.statusText}` };
+                    }
+                    alert('Error: ' + (errorData.error || 'Failed to submit claim'));
+                    return;
+                }
+
                 const result = await response.json();
+                console.log('Submit payment result:', result);
+                
                 if (result.success) {
                     alert('Claim submitted for payment approval!');
                     // Reload claim to show updated status
@@ -745,7 +764,7 @@
                 }
             } catch (error) {
                 console.error('Error submitting claim for payment:', error);
-                alert('Error submitting claim: ' + error.message);
+                alert('Error submitting claim: ' + error.message + '\n\nPlease check the browser console for details.');
             }
         }
 

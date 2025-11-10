@@ -727,6 +727,18 @@
         if (sessionStorage.getItem('authenticated') !== 'true') {
             window.location.href = '../login.html';
         }
+        
+        // Check if user is an insurer and redirect to insurer dashboard
+        try {
+            const userData = JSON.parse(sessionStorage.getItem('user') || '{}');
+            if (userData.email === 'insurer@doclittle.com' || userData.role === 'insurer_admin' || userData.role === 'insurer') {
+                console.log('Insurer user detected, redirecting to insurer dashboard...');
+                window.location.href = '../insurer/insurer-dashboard.html';
+                return;
+            }
+        } catch (e) {
+            console.warn('Error checking user role:', e);
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             // Load userData AFTER DOM is ready

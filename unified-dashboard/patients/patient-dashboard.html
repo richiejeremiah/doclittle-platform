@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Dashboard - Medical Coding Assistant</title>
+    <link rel="stylesheet" href="../assets/css/global.css">
+    <script src="../assets/js/config.js"></script>
+    <style>
+        :root {
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --primary-light: #3b82f6;
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+            background: #f7fafc;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .sidebar-logo {
+            font-size: 32px;
+            line-height: 1;
+            letter-spacing: -3px;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-logo .doc {
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+        }
+
+        .sidebar-logo .little {
+            font-family: 'Verdana', Geneva, sans-serif;
+            font-weight: 700;
+        }
+
+        .sidebar-subtitle {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-top: 4px;
+        }
+
+        .sidebar-nav {
+            padding: 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: var(--gray-700);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+            text-decoration: none;
+        }
+
+        .nav-item:hover {
+            background: var(--gray-50);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--gray-200);
+            position: absolute;
+            bottom: 0;
+            width: 260px;
+            background: white;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            padding: 32px;
+            flex: 1;
+        }
+
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            font-size: 16px;
+            color: var(--gray-600);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .card-icon {
+            font-size: 24px;
+        }
+
+        .wallet-balance {
+            margin: 20px 0;
+        }
+
+        .balance-label {
+            font-size: 12px;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .balance-amount {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .wallet-info {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .wallet-info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .wallet-info-label {
+            color: var(--gray-600);
+        }
+
+        .wallet-info-value {
+            color: var(--gray-900);
+            font-weight: 600;
+            font-family: monospace;
+            word-break: break-all;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-300);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .claims-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .claim-item {
+            padding: 16px;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .claim-item:last-child {
+            border-bottom: none;
+        }
+
+        .claim-info {
+            flex: 1;
+        }
+
+        .claim-date {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-bottom: 4px;
+        }
+
+        .claim-amount {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .claim-status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .claim-status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .claim-status.approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .claim-status.paid {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 48px;
+            color: var(--gray-600);
+        }
+
+        .error-message {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px;
+            color: var(--gray-500);
+        }
+
+        .refresh-btn {
+            padding: 8px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <span class="doc">Doc</span><span class="little">Little</span>.
+                </div>
+                <div class="sidebar-subtitle">Medical Coding Assistant</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="patient-dashboard.html" class="nav-item active">
+                    <span class="nav-icon">🏠</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#benefits" class="nav-item" onclick="document.getElementById('benefits').scrollIntoView({behavior: 'smooth'}); return false;">
+                    <span class="nav-icon">🏥</span>
+                    <span>My Benefits</span>
+                </a>
+                <a href="wallet.html" class="nav-item">
+                    <span class="nav-icon">💰</span>
+                    <span>My Wallet</span>
+                </a>
+                <a href="#claims" class="nav-item" onclick="document.getElementById('claims').scrollIntoView({behavior: 'smooth'}); return false;">
+                    <span class="nav-icon">💳</span>
+                    <span>Bills & Claims</span>
+                </a>
+                <a href="appointments.html" class="nav-item">
+                    <span class="nav-icon">📅</span>
+                    <span>Appointments</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">P</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">Patient</div>
+                        <div class="user-role">Patient Account</div>
+                    </div>
+                    <button class="logout-btn" onclick="logout()" title="Logout">🚪</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Patient Dashboard</h1>
+                <p class="page-subtitle">Welcome back! Here's your healthcare overview</p>
+            </div>
+
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Copay Amount</div>
+                    <div class="stat-value" id="copayAmount">$0.00</div>
+                </div>
+                <div class="stat-card" style="border: 2px solid var(--primary); background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);">
+                    <div class="stat-label">
+                        Account Balance 
+                        <span style="display: inline-block; margin-left: 4px; padding: 2px 6px; background: var(--primary); color: white; border-radius: 4px; font-size: 9px; font-weight: 600; vertical-align: middle;">CIRCLE</span>
+                    </div>
+                    <div class="stat-value" id="walletBalance" style="color: var(--primary);">$3,000.00</div>
+                    <div style="font-size: 10px; color: var(--gray-500); margin-top: 4px;">Powered by Circle Wallet</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Pending Claims</div>
+                    <div class="stat-value" id="pendingClaims">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Bills</div>
+                    <div class="stat-value" id="totalBills">$0.00</div>
+                </div>
+            </div>
+
+            <!-- Dashboard Grid -->
+            <div class="dashboard-grid">
+                <!-- Benefits Card -->
+                <div class="dashboard-card" id="benefits">
+                    <div class="card-header">
+                        <div class="card-title">My Benefits</div>
+                        <div class="card-icon">🏥</div>
+                    </div>
+                    <div id="benefitsContent">
+                        <div class="loading">Loading benefits...</div>
+                    </div>
+                    <button class="btn btn-secondary" style="width: 100%; margin-top: 16px;" onclick="loadBenefits()">
+                        🔄 Refresh Benefits
+                    </button>
+                </div>
+
+                <!-- Recent Claims Card -->
+                <div class="dashboard-card" id="claims">
+                    <div class="card-header">
+                        <div class="card-title">Recent Claims</div>
+                        <div class="card-icon">📋</div>
+                    </div>
+                    <div id="claimsList">
+                        <div class="loading">Loading claims...</div>
+                    </div>
+                </div>
+
+                <!-- Medical Records Card -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div class="card-title">Medical Records</div>
+                        <div class="card-icon">📁</div>
+                    </div>
+                    <div style="padding: 20px 0;">
+                        <p style="color: var(--gray-600); margin-bottom: 16px;">Access your medical records and health information</p>
+                        <button class="btn btn-primary" style="width: 100%;" onclick="alert('Medical records feature coming soon')">
+                            View Medical Records
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = window.API_BASE || 'http://localhost:4000';
+        
+        // Circle Wallet Balance Management (Frontend-only for demo)
+        const WALLET_BALANCE_KEY = 'patient_wallet_balance';
+        const PAID_CLAIMS_KEY = 'patient_paid_claims';
+        
+        // Initialize wallet balance if not exists
+        function initializeWalletBalance() {
+            const storedBalance = localStorage.getItem(WALLET_BALANCE_KEY);
+            if (!storedBalance) {
+                localStorage.setItem(WALLET_BALANCE_KEY, '3000.00');
+            }
+        }
+        
+        // Get wallet balance
+        function getWalletBalance() {
+            const balance = parseFloat(localStorage.getItem(WALLET_BALANCE_KEY) || '3000.00');
+            return balance;
+        }
+        
+        // Update wallet balance
+        function updateWalletBalance(newBalance) {
+            localStorage.setItem(WALLET_BALANCE_KEY, newBalance.toFixed(2));
+            updateWalletBalanceDisplay();
+        }
+        
+        // Deduct from wallet balance
+        function deductFromWallet(amount) {
+            const currentBalance = getWalletBalance();
+            const newBalance = Math.max(0, currentBalance - amount);
+            updateWalletBalance(newBalance);
+            return newBalance;
+        }
+        
+        // Update wallet balance display
+        function updateWalletBalanceDisplay() {
+            const balance = getWalletBalance();
+            const balanceElement = document.getElementById('walletBalance');
+            if (balanceElement) {
+                balanceElement.textContent = `$${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                // Add visual feedback if balance is low
+                if (balance < 100) {
+                    balanceElement.style.color = '#ef4444'; // Red for low balance
+                } else if (balance < 500) {
+                    balanceElement.style.color = '#f59e0b'; // Orange for medium balance
+                } else {
+                    balanceElement.style.color = 'var(--primary)'; // Primary blue for good balance
+                }
+            }
+        }
+        
+        // Paid Claims Management (Frontend-only for demo)
+        function getPaidClaims() {
+            try {
+                const paidClaims = localStorage.getItem(PAID_CLAIMS_KEY);
+                return paidClaims ? JSON.parse(paidClaims) : {};
+            } catch (e) {
+                return {};
+            }
+        }
+        
+        function markClaimAsPaid(claimId) {
+            const paidClaims = getPaidClaims();
+            paidClaims[claimId] = {
+                paidAt: new Date().toISOString(),
+                paid: true
+            };
+            localStorage.setItem(PAID_CLAIMS_KEY, JSON.stringify(paidClaims));
+        }
+        
+        function isClaimPaid(claimId) {
+            const paidClaims = getPaidClaims();
+            return paidClaims[claimId] && paidClaims[claimId].paid === true;
+        }
+
+        // Check authentication
+        if (sessionStorage.getItem('authenticated') !== 'true') {
+            window.location.href = '../login.html';
+        }
+        
+        // Initialize wallet balance on page load
+        initializeWalletBalance();
+
+        // Load user info - will be updated with patient data
+        const userData = JSON.parse(sessionStorage.getItem('user') || '{}');
+        const patientName = userData.name || userData.patientName || '';
+        const fallbackLabel = patientName || userData.email || 'Patient';
+        const initials = fallbackLabel
+            .split(' ')
+            .map(part => part.charAt(0))
+            .join('')
+            .substring(0, 2)
+            .toUpperCase() || 'PT';
+
+        document.getElementById('userName').textContent = fallbackLabel;
+        document.getElementById('userAvatar').textContent = initials;
+        
+        // Update with actual patient data when loaded
+        async function updateUserInfo() {
+            try {
+                if (!patientName) {
+                    return;
+                }
+
+                const response = await fetch(`${API_BASE}/api/patient/benefits?patientName=${encodeURIComponent(patientName)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.patient) {
+                        document.getElementById('userName').textContent = data.patient.name;
+                        const initials = data.patient.name.split(' ').map(n => n[0]).join('').substring(0, 2);
+                        document.getElementById('userAvatar').textContent = initials;
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating user info:', error);
+            }
+        }
+        
+        updateUserInfo();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboard();
+        });
+
+        async function loadDashboard() {
+            // Initialize and display wallet balance first
+            initializeWalletBalance();
+            updateWalletBalanceDisplay();
+            
+            await Promise.all([
+                loadBenefits(),
+                loadClaims(),
+                loadStats()
+            ]);
+        }
+
+        async function loadBenefits() {
+            try {
+                if (!patientName) {
+                    throw new Error('Patient name is not available in the current session');
+                }
+
+                const response = await fetch(`${API_BASE}/api/patient/benefits?patientName=${encodeURIComponent(patientName)}`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load benefits');
+                }
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to load benefits');
+                }
+                
+                displayBenefits(data);
+                
+            } catch (error) {
+                console.error('Error loading benefits:', error);
+                document.getElementById('benefitsContent').innerHTML = `
+                    <div class="empty-state">
+                        <p>Unable to load benefits data</p>
+                        <p style="font-size: 12px; color: var(--gray-500);">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function displayBenefits(data) {
+            const container = document.getElementById('benefitsContent');
+            const { patient, insurance, eligibility, stats } = data;
+            
+            if (!eligibility && !insurance) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p>No insurance benefits found</p>
+                        <p style="font-size: 12px; color: var(--gray-500);">Please contact support to set up your insurance</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Build benefits display
+            let html = '';
+            
+            // Insurance Info
+            if (insurance) {
+                html += `
+                    <div class="wallet-info" style="margin-bottom: 20px;">
+                        <div class="wallet-info-item">
+                            <span class="wallet-info-label">Insurance Provider:</span>
+                            <span class="wallet-info-value">${insurance.payer_name || insurance.payer_id || 'N/A'}</span>
+                        </div>
+                        <div class="wallet-info-item">
+                            <span class="wallet-info-label">Member ID:</span>
+                            <span class="wallet-info-value">${insurance.member_id || 'N/A'}</span>
+                        </div>
+                        ${insurance.group_number ? `
+                        <div class="wallet-info-item">
+                            <span class="wallet-info-label">Group Number:</span>
+                            <span class="wallet-info-value">${insurance.group_number}</span>
+                        </div>
+                        ` : ''}
+                        ${insurance.plan_name ? `
+                        <div class="wallet-info-item">
+                            <span class="wallet-info-label">Plan Name:</span>
+                            <span class="wallet-info-value">${insurance.plan_name}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+            
+            // Eligibility/Benefits Info
+            if (eligibility) {
+                const isEligible = eligibility.eligible;
+                const copay = eligibility.copay_amount || 0;
+                const deductibleTotal = eligibility.deductible_total || 0;
+                const deductibleRemaining = eligibility.deductible_remaining || 0;
+                const deductibleMet = eligibility.deductible_met || (deductibleTotal - deductibleRemaining);
+                const coinsurance = eligibility.coinsurance_percent || 0;
+                const allowedAmount = eligibility.allowed_amount || 0;
+                const insurancePays = eligibility.insurance_pays || 0;
+                
+                html += `
+                    <div class="wallet-info">
+                        <div class="wallet-info-item">
+                            <span class="wallet-info-label">Coverage Status:</span>
+                            <span class="wallet-info-value" style="color: ${isEligible ? '#10b981' : '#ef4444'}; font-weight: 600;">
+                                ${isEligible ? '✅ Active' : '❌ Inactive'}
+                            </span>
+                        </div>
+                        ${eligibility.plan_summary ? `
+                        <div class="wallet-info-item">
+                            <span class="wallet-info-label">Plan Summary:</span>
+                            <span class="wallet-info-value" style="font-weight: normal;">${eligibility.plan_summary}</span>
+                        </div>
+                        ` : ''}
+                        <div class="wallet-info-item">
+                            <span class="wallet-info-label">Copay Amount:</span>
+                            <span class="wallet-info-value">$${copay.toFixed(2)}</span>
+                        </div>
+                        <div class="wallet-info-item">
+                            <span class="wallet-info-label">Allowed Amount:</span>
+                            <span class="wallet-info-value">$${allowedAmount.toFixed(2)}</span>
+                        </div>
+                        <div class="wallet-info-item">
+                            <span class="wallet-info-label">Insurance Pays:</span>
+                            <span class="wallet-info-value">$${insurancePays.toFixed(2)}</span>
+                        </div>
+                        ${deductibleTotal > 0 ? `
+                        <div style="margin: 16px 0; padding: 16px; background: #f7fafc; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="font-size: 12px; color: var(--gray-600); font-weight: 600;">Deductible Progress</span>
+                                <span style="font-size: 12px; color: var(--gray-600);">${((deductibleMet / deductibleTotal) * 100).toFixed(1)}% Met</span>
+                            </div>
+                            <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
+                                <div style="width: ${(deductibleMet / deductibleTotal) * 100}%; height: 100%; background: linear-gradient(90deg, #3b82f6, #1e40af); transition: width 0.3s;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 12px; font-size: 12px;">
+                                <div>
+                                    <div style="color: var(--gray-500);">Met</div>
+                                    <div style="font-weight: 600; color: var(--gray-900);">$${deductibleMet.toFixed(2)}</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="color: var(--gray-500);">Remaining</div>
+                                    <div style="font-weight: 600; color: var(--gray-900);">$${deductibleRemaining.toFixed(2)}</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="color: var(--gray-500);">Total</div>
+                                    <div style="font-weight: 600; color: var(--gray-900);">$${deductibleTotal.toFixed(2)}</div>
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+                        ${coinsurance > 0 ? `
+                        <div class="wallet-info-item">
+                            <span class="wallet-info-label">Coinsurance:</span>
+                            <span class="wallet-info-value">${coinsurance}%</span>
+                        </div>
+                        ` : ''}
+                        ${eligibility.service_code ? `
+                        <div class="wallet-info-item">
+                            <span class="wallet-info-label">Service Code:</span>
+                            <span class="wallet-info-value">${eligibility.service_code}</span>
+                        </div>
+                        ` : ''}
+                        ${eligibility.date_of_service ? `
+                        <div class="wallet-info-item">
+                            <span class="wallet-info-label">Last Checked:</span>
+                            <span class="wallet-info-value" style="font-weight: normal;">${new Date(eligibility.date_of_service).toLocaleDateString()}</span>
+                        </div>
+                        ` : ''}
+                        ${eligibility.created_at ? `
+                        <div class="wallet-info-item">
+                            <span class="wallet-info-label">Eligibility Date:</span>
+                            <span class="wallet-info-value" style="font-weight: normal;">${new Date(eligibility.created_at).toLocaleDateString()}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="empty-state">
+                        <p>No eligibility data available</p>
+                        <p style="font-size: 12px; color: var(--gray-500);">Eligibility check has not been performed yet</p>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        async function loadClaims() {
+            try {
+                if (!patientName) {
+                    throw new Error('Patient name is not available in the current session');
+                }
+
+                // Get patient's benefits data which includes claims
+                const response = await fetch(`${API_BASE}/api/patient/benefits?patientName=${encodeURIComponent(patientName)}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.claims) {
+                        // Fetch detailed claim data for each claim to get EOB breakdown
+                        const claimsWithDetails = await Promise.all(data.claims.map(async (claim) => {
+                            try {
+                                const claimResponse = await fetch(`${API_BASE}/api/claims/${claim.id}`);
+                                if (claimResponse.ok) {
+                                    const claimData = await claimResponse.json();
+                                    if (claimData.success) {
+                                        return {
+                                            ...claim,
+                                            eob: claimData.eob,
+                                            diagnosisCodes: claimData.diagnosisCodes || []
+                                        };
+                                    }
+                                }
+                                return claim;
+                            } catch (e) {
+                                console.warn('Could not fetch claim details:', e);
+                                return claim;
+                            }
+                        }));
+                        displayClaims(claimsWithDetails, data.eligibility);
+                    } else {
+                        throw new Error('No claims data available');
+                    }
+                } else {
+                    throw new Error('Failed to load claims');
+                }
+            } catch (error) {
+                console.error('Error loading claims:', error);
+                document.getElementById('claimsList').innerHTML = `
+                    <div class="empty-state">
+                        No claims found
+                    </div>
+                `;
+            }
+        }
+
+        function displayClaims(claims, eligibility = null) {
+            const container = document.getElementById('claimsList');
+            
+            if (claims.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        No claims yet
+                    </div>
+                `;
+                return;
+            }
+
+            // Only show the latest claim
+            const claim = claims[0];
+            const date = new Date(claim.submitted_at || claim.created_at).toLocaleDateString();
+            const eob = claim.eob || {};
+            const totals = eob.totals || {};
+            const lineItems = eob.lineItems || [];
+            const amountBilled = parseFloat(claim.total_amount) || parseFloat(totals.amountBilled) || 0;
+            const allowedAmount = parseFloat(totals.allowedAmount || amountBilled * 0.85);
+            const status = claim.status || 'pending';
+            const paymentStatus = claim.payment_status || 'pending';
+            
+            // Determine status display
+            let statusDisplay = 'Pending Approval';
+            let statusColor = '#f59e0b';
+            if (status === 'approved' || paymentStatus === 'approved') {
+                statusDisplay = 'Approved';
+                statusColor = '#10b981';
+            } else if (status === 'submitted' || paymentStatus === 'submitted') {
+                statusDisplay = 'Waiting Approval';
+                statusColor = '#f59e0b';
+            } else if (status === 'paid' || paymentStatus === 'paid') {
+                statusDisplay = 'Paid';
+                statusColor = '#10b981';
+            } else if (status === 'draft') {
+                statusDisplay = 'Not Submitted';
+                statusColor = '#6b7280';
+            }
+            
+            // Calculate patient responsibility
+            const copay = parseFloat(totals.copay || claim.copay_amount || 0);
+            const deductible = parseFloat(totals.deductible || 0);
+            const coinsurance = parseFloat(totals.coinsurance || 0);
+            const patientOwe = parseFloat(totals.whatYouOwe || (copay + deductible + coinsurance) || amountBilled);
+            const planPaid = parseFloat(totals.planPaid || 0);
+            const amountNotCovered = parseFloat(totals.amountNotCovered || 0);
+            
+            // Format service codes
+            const serviceCodes = lineItems.length > 0 
+                ? lineItems.map(item => item.cptCode || item.code).filter(c => c && c !== 'N/A').join(', ')
+                : (claim.service_code && claim.service_code !== 'N/A' ? claim.service_code : 'N/A');
+            
+            // Format diagnosis codes (description only, no codes)
+            const diagnosisDescriptions = claim.diagnosisCodes && claim.diagnosisCodes.length > 0
+                ? claim.diagnosisCodes.map(d => d.description || d.code).filter(d => d && d !== 'N/A')
+                : [];
+            const diagnosisCodesDisplay = diagnosisDescriptions.length > 0 
+                ? diagnosisDescriptions.join(', ')
+                : 'N/A';
+            
+            // Store diagnosis codes for popup
+            const diagnosisCodesList = claim.diagnosisCodes && claim.diagnosisCodes.length > 0
+                ? claim.diagnosisCodes
+                : [];
+            
+            container.innerHTML = `
+                <div class="wallet-info">
+                    <div class="wallet-info-item">
+                        <span class="wallet-info-label">Claim Status:</span>
+                        <span class="wallet-info-value" style="color: ${statusColor}; font-weight: 600;">
+                            ${statusDisplay}
+                        </span>
+                    </div>
+                    <div class="wallet-info-item">
+                        <span class="wallet-info-label">Date of Service:</span>
+                        <span class="wallet-info-value" style="font-weight: normal;">${date}</span>
+                    </div>
+                    <div class="wallet-info-item">
+                        <span class="wallet-info-label">Claim ID:</span>
+                        <span class="wallet-info-value" style="font-weight: normal; font-size: 12px;">${claim.id}</span>
+                    </div>
+                    ${diagnosisCodesDisplay !== 'N/A' ? `
+                    <div class="wallet-info-item">
+                        <span class="wallet-info-label">Diagnosis:</span>
+                        <span class="wallet-info-value" style="font-weight: normal; font-size: 12px;">${diagnosisCodesDisplay}</span>
+                    </div>
+                    ` : ''}
+                    ${serviceCodes !== 'N/A' ? `
+                    <div class="wallet-info-item">
+                        <span class="wallet-info-label">Service Codes:</span>
+                        <span class="wallet-info-value" style="font-weight: normal; font-size: 12px;">${serviceCodes}</span>
+                    </div>
+                    ` : ''}
+                    <div class="wallet-info-item">
+                        <span class="wallet-info-label">Amount Billed:</span>
+                        <span class="wallet-info-value">$${amountBilled.toFixed(2)}</span>
+                    </div>
+                    <div class="wallet-info-item">
+                        <span class="wallet-info-label">Allowed Amount:</span>
+                        <span class="wallet-info-value">$${allowedAmount.toFixed(2)}</span>
+                    </div>
+                    ${planPaid > 0 ? `
+                    <div class="wallet-info-item">
+                        <span class="wallet-info-label">Insurance Pays:</span>
+                        <span class="wallet-info-value" style="color: #10b981;">$${planPaid.toFixed(2)}</span>
+                    </div>
+                    ` : ''}
+                    ${copay > 0 ? `
+                    <div class="wallet-info-item">
+                        <span class="wallet-info-label">Copay Amount:</span>
+                        <span class="wallet-info-value">$${copay.toFixed(2)}</span>
+                    </div>
+                    ` : ''}
+                    ${deductible > 0 ? `
+                    <div class="wallet-info-item">
+                        <span class="wallet-info-label">Deductible Applied:</span>
+                        <span class="wallet-info-value">$${deductible.toFixed(2)}</span>
+                    </div>
+                    ` : ''}
+                    ${coinsurance > 0 ? `
+                    <div class="wallet-info-item">
+                        <span class="wallet-info-label">Coinsurance:</span>
+                        <span class="wallet-info-value">$${coinsurance.toFixed(2)}</span>
+                    </div>
+                    ` : ''}
+                    ${amountNotCovered > 0 ? `
+                    <div class="wallet-info-item">
+                        <span class="wallet-info-label">Amount Not Covered:</span>
+                        <span class="wallet-info-value">$${amountNotCovered.toFixed(2)}</span>
+                    </div>
+                    ` : ''}
+                    <div style="margin: 16px 0; padding: 16px; background: #f7fafc; border-radius: 8px; border: 2px solid var(--primary); cursor: pointer; transition: all 0.2s;" 
+                         onmouseover="this.style.background='#eff6ff'" 
+                         onmouseout="this.style.background='#f7fafc'"
+                         onclick="showWhatYouOwePopup('${claim.id}')">
+                        <div class="wallet-info-item" style="margin-bottom: 0;">
+                            <span class="wallet-info-label" style="font-size: 14px; font-weight: 700;">What You Owe:</span>
+                            <span class="wallet-info-value" style="font-size: 24px; color: var(--primary);">$${patientOwe.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--gray-200);">
+                        <button onclick="showPaymentModal('${claim.id}', ${patientOwe})" style="display: inline-block; padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; text-align: center; width: 100%; cursor: pointer;">
+                            Pay
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function showWhatYouOwePopup(claimId) {
+            try {
+                // Fetch claim details
+                const response = await fetch(`${API_BASE}/api/claims/${claimId}`);
+                if (!response.ok) {
+                    alert('Failed to load claim details');
+                    return;
+                }
+                
+                const data = await response.json();
+                if (!data.success || !data.claim) {
+                    alert('Failed to load claim details');
+                    return;
+                }
+                
+                const claim = data.claim;
+                const eob = data.eob || {};
+                const lineItems = eob.lineItems || [];
+                const diagnosisCodes = data.diagnosisCodes || [];
+                const totals = eob.totals || {};
+                const patientOwe = parseFloat(totals.whatYouOwe || claim.total_amount || 0);
+                
+                // Get diagnosis descriptions only (no codes)
+                const diagnosisDescriptions = diagnosisCodes.map(d => d.description || d.code).filter(d => d && d !== 'N/A');
+                
+                // Get diagnosis codes for linking
+                const diagnosisCodeLinks = diagnosisCodes.map(d => d.code).filter(c => c && c !== 'N/A');
+                
+                // Create popup HTML
+                const popupHTML = `
+                    <div id="whatYouOwePopup" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;">
+                        <div style="background: white; border-radius: 12px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                            <div style="padding: 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10;">
+                                <h2 style="margin: 0; font-size: 20px; color: #1a202c;">What You Owe: $${patientOwe.toFixed(2)}</h2>
+                                <button onclick="closeWhatYouOwePopup()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #718096; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">&times;</button>
+                            </div>
+                            <div style="padding: 24px;">
+                                ${diagnosisDescriptions.length > 0 ? `
+                                <div style="margin-bottom: 24px;">
+                                    <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #4a5568; text-transform: uppercase; letter-spacing: 0.5px;">Diagnosis:</h3>
+                                    <div style="color: #2d3748; font-size: 14px; line-height: 1.6;">
+                                        ${diagnosisDescriptions.join('<br>')}
+                                    </div>
+                                </div>
+                                ` : ''}
+                                
+                                ${diagnosisCodeLinks.length > 0 ? `
+                                <div style="margin-bottom: 24px;">
+                                    <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #4a5568; text-transform: uppercase; letter-spacing: 0.5px;">Codes:</h3>
+                                    <div style="display: flex; flex-wrap: gap: 8px;">
+                                        ${diagnosisCodeLinks.map(code => {
+                                            // Format ICD-10 code for URL (remove dots for URL)
+                                            const codeForUrl = code.replace(/\\./g, '');
+                                            return '<a href="https://www.icd10data.com/ICD10CM/' + codeForUrl + '" target="_blank" style="padding: 6px 12px; background: #e6fffa; border: 1px solid #38b2ac; border-radius: 6px; font-size: 13px; color: #1e40af; text-decoration: none; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background=\'#b2f5ea\'; this.style.borderColor=\'#319795\';" onmouseout="this.style.background=\'#e6fffa\'; this.style.borderColor=\'#38b2ac\';">' + code + '</a>';
+                                        }).join('')}
+                                    </div>
+                                </div>
+                                ` : ''}
+                                
+                                ${lineItems.length > 0 ? `
+                                <div style="margin-bottom: 24px;">
+                                    <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #4a5568; text-transform: uppercase; letter-spacing: 0.5px;">Services:</h3>
+                                    <div style="space-y: 12px;">
+                                        ${lineItems.map(item => {
+                                            const code = item.cptCode || item.code || 'N/A';
+                                            const description = item.typeOfService || item.description || 'Service';
+                                            const billed = parseFloat(item.amountBilled || 0);
+                                            const allowed = parseFloat(item.allowedAmount || 0);
+                                            const youPay = parseFloat(item.whatYouOwe || 0);
+                                            
+                                            return `
+                                                <div style="padding: 12px; background: #f7fafc; border-radius: 8px; margin-bottom: 12px; border: 1px solid #e2e8f0;">
+                                                    <div style="font-size: 14px; font-weight: 600; color: #1a202c; margin-bottom: 8px;">
+                                                        ${code} - ${description}
+                                                    </div>
+                                                    <div style="font-size: 12px; color: #4a5568;">
+                                                        Billed: $${billed.toFixed(2)} | Allowed: $${allowed.toFixed(2)} | You Pay: $${youPay.toFixed(2)}
+                                                    </div>
+                                                </div>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                </div>
+                                ` : ''}
+                                
+                                <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #e2e8f0; display: flex; gap: 12px; justify-content: flex-end;">
+                                    <button onclick="closeWhatYouOwePopup()" style="padding: 10px 20px; background: #e2e8f0; color: #4a5568; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Close</button>
+                                    <button onclick="closeWhatYouOwePopup(); showPaymentModal('${claimId}', ${patientOwe})" style="padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Pay Now</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Insert popup into page
+                document.body.insertAdjacentHTML('beforeend', popupHTML);
+            } catch (error) {
+                console.error('Error loading claim details for popup:', error);
+                alert('Error loading claim details: ' + error.message);
+            }
+        }
+        
+        function closeWhatYouOwePopup() {
+            const popup = document.getElementById('whatYouOwePopup');
+            if (popup) {
+                popup.remove();
+            }
+        }
+        
+        async function showPaymentModal(claimId, amount) {
+            // Check wallet balance (Circle Wallet)
+            const currentBalance = getWalletBalance();
+            
+            if (currentBalance < amount) {
+                const insufficient = amount - currentBalance;
+                alert(`❌ Insufficient balance!\n\nYour Circle wallet balance: $${currentBalance.toFixed(2)}\nAmount needed: $${amount.toFixed(2)}\nShortfall: $${insufficient.toFixed(2)}\n\nPlease add funds to your wallet to continue.`);
+                return;
+            }
+            
+            // Show payment confirmation with balance info
+            const newBalance = currentBalance - amount;
+            const confirmMessage = `Pay $${amount.toFixed(2)} for this claim?\n\n` +
+                                  `Current Balance: $${currentBalance.toFixed(2)}\n` +
+                                  `After Payment: $${newBalance.toFixed(2)}\n\n` +
+                                  `Payment will be processed through Circle Wallet.`;
+            
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+            
+            // Simulate payment processing (frontend-only for demo)
+            try {
+                // Show processing indicator
+                const processingMessage = `Processing payment through Circle Wallet...\n\nDeducting $${amount.toFixed(2)} from your account balance.`;
+                
+                // Deduct from wallet balance
+                const updatedBalance = deductFromWallet(amount);
+                
+                // Simulate a short delay for realism
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Show success message
+                alert(`✅ Payment successful!\n\n` +
+                      `Amount paid: $${amount.toFixed(2)}\n` +
+                      `New balance: $${updatedBalance.toFixed(2)}\n\n` +
+                      `Your payment has been processed through Circle Wallet.`);
+                
+                // Update stats display
+                updateWalletBalanceDisplay();
+                
+                // Reload claims to show updated status
+                loadClaims();
+                loadStats();
+                
+                console.log(`[Circle Wallet] Payment processed: $${amount.toFixed(2)} deducted. New balance: $${updatedBalance.toFixed(2)}`);
+                
+            } catch (error) {
+                alert('Error processing payment: ' + error.message);
+                console.error('Payment error:', error);
+            }
+        }
+
+        async function loadStats() {
+            try {
+                if (!patientName) {
+                    throw new Error('Patient name is not available in the current session');
+                }
+
+                // Load benefits data (which includes stats)
+                const response = await fetch(`${API_BASE}/api/patient/benefits?patientName=${encodeURIComponent(patientName)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        // Update stats from benefits data
+                        const stats = data.stats || {};
+                        document.getElementById('pendingClaims').textContent = stats.pending_claims || 0;
+                        document.getElementById('totalBills').textContent = `$${(stats.total_bills || 0).toFixed(2)}`;
+                        
+                        // Update benefits stats
+                        if (data.eligibility) {
+                            const copay = data.eligibility.copay_amount || 0;
+                            document.getElementById('copayAmount').textContent = `$${copay.toFixed(2)}`;
+                        }
+                        
+                        // Update wallet balance from localStorage (Circle Wallet)
+                        updateWalletBalanceDisplay();
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                // Still update wallet balance even if API call fails
+                updateWalletBalanceDisplay();
+            }
+        }
+
+        async function refreshBenefits() {
+            await loadBenefits();
+            await loadStats();
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+            setTimeout(() => {
+                errorEl.style.display = 'none';
+            }, 5000);
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = '../login.html';
+        }
+    </script>
+</body>
+
+</html>
+

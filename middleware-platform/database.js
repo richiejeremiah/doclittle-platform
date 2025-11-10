@@ -1407,8 +1407,11 @@ module.exports = {
     const queryParams = [];
 
     if (params.name) {
-      query += ' AND name LIKE ?';
-      queryParams.push(`%${params.name}%`);
+      // Search by name column (case-insensitive)
+      query += ' AND (LOWER(name) LIKE LOWER(?) OR name LIKE ?)';
+      const namePattern = `%${params.name}%`;
+      queryParams.push(namePattern);
+      queryParams.push(namePattern);
     }
     if (params.phone) {
       query += ' AND phone = ?';
@@ -1425,10 +1428,42 @@ module.exports = {
     const stmt = db.prepare(query);
     const rows = stmt.all(...queryParams);
 
-    return rows.map(row => ({
+    // Also search in resource_data JSON for name fields if name search didn't yield results
+    let results = rows.map(row => ({
       ...row,
       resource_data: JSON.parse(row.resource_data)
     }));
+
+    // If name search and no results, try searching in JSON
+    if (params.name && results.length === 0) {
+      const allPatients = db.prepare('SELECT * FROM fhir_patients WHERE is_deleted = 0 LIMIT 200').all();
+      const nameLower = params.name.toLowerCase();
+      results = allPatients
+        .map(row => {
+          try {
+            const resourceData = JSON.parse(row.resource_data);
+            const name = resourceData.name?.[0];
+            if (name) {
+              const given = (name.given || []).join(' ').toLowerCase();
+              const family = (name.family || '').toLowerCase();
+              const fullName = `${given} ${family}`.trim();
+              if (fullName.includes(nameLower) || given.includes(nameLower) || family.includes(nameLower)) {
+                return {
+                  ...row,
+                  resource_data: resourceData
+                };
+              }
+            }
+            return null;
+          } catch (e) {
+            return null;
+          }
+        })
+        .filter(p => p !== null)
+        .slice(0, params.limit || 50);
+    }
+
+    return results;
   },
 
   // Create FHIR Encounter (Voice Call Session)
@@ -1979,34 +2014,41 @@ module.exports = {
 
   // Create insurance claim
   createInsuranceClaim(claim) {
-    const stmt = db.prepare(`
-      INSERT INTO insurance_claims (
-        id, appointment_id, patient_id, member_id, payer_id,
-        service_code, diagnosis_code, total_amount, copay_amount,
-        insurance_amount, status, x12_claim_id, blockchain_proof,
-        submitted_at, response_data, circle_transfer_id, payment_status, payment_amount
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    return stmt.run(
-      claim.id,
-      claim.appointment_id || null,
-      claim.patient_id || null,
-      claim.member_id,
-      claim.payer_id,
-      claim.service_code || null,
-      claim.diagnosis_code || null,
-      claim.total_amount,
-      claim.copay_amount || 0,
-      claim.insurance_amount || 0,
-      claim.status || 'submitted',
-      claim.x12_claim_id || null,
-      claim.blockchain_proof || null,
-      claim.submitted_at || new Date().toISOString(),
-      claim.response_data || null,
-      claim.circle_transfer_id || null,
-      claim.payment_status || 'pending',
-      claim.payment_amount || null
-    );
+    try {
+      const stmt = db.prepare(`
+        INSERT INTO insurance_claims (
+          id, appointment_id, patient_id, member_id, payer_id,
+          service_code, diagnosis_code, total_amount, copay_amount,
+          insurance_amount, status, x12_claim_id, blockchain_proof,
+          submitted_at, response_data, circle_transfer_id, payment_status, payment_amount
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      const result = stmt.run(
+        claim.id,
+        claim.appointment_id || null,
+        claim.patient_id || null,
+        claim.member_id,
+        claim.payer_id,
+        claim.service_code || null,
+        claim.diagnosis_code || null,
+        claim.total_amount,
+        claim.copay_amount || 0,
+        claim.insurance_amount || 0,
+        claim.status || 'submitted',
+        claim.x12_claim_id || null,
+        claim.blockchain_proof || null,
+        claim.submitted_at || new Date().toISOString(),
+        claim.response_data || null,
+        claim.circle_transfer_id || null,
+        claim.payment_status || 'pending',
+        claim.payment_amount || null
+      );
+      return result;
+    } catch (error) {
+      console.error('❌ Error creating insurance claim:', error);
+      console.error('Claim data:', JSON.stringify(claim, null, 2));
+      throw error; // Re-throw to be handled by caller
+    }
   },
 
   // Get insurance claim by ID
@@ -2185,6 +2227,10 @@ module.exports = {
       fields.push('status = ?');
       values.push(updates.status);
     }
+    if (updates.submitted_at !== undefined) {
+      fields.push('submitted_at = ?');
+      values.push(updates.submitted_at);
+    }
     if (updates.status_checked_at !== undefined) {
       fields.push('status_checked_at = ?');
       values.push(updates.status_checked_at);
@@ -2212,6 +2258,10 @@ module.exports = {
     if (updates.payment_amount !== undefined) {
       fields.push('payment_amount = ?');
       values.push(updates.payment_amount);
+    }
+    if (updates.insurance_amount !== undefined) {
+      fields.push('insurance_amount = ?');
+      values.push(updates.insurance_amount);
     }
 
     if (fields.length === 0) {
@@ -2324,8 +2374,26 @@ module.exports = {
 
   // Create or update patient insurance
   upsertPatientInsurance(insurance) {
-    // Check if patient already has this insurance
-    const existing = db.getPatientInsurance(insurance.patient_id, insurance.member_id);
+    // Check if patient already has this insurance (inline the check to avoid circular dependency)
+    let existing = null;
+    if (insurance.member_id) {
+      const checkStmt = db.prepare(`
+        SELECT * FROM patient_insurance
+        WHERE patient_id = ? AND member_id = ?
+        ORDER BY is_primary DESC, created_at DESC
+        LIMIT 1
+      `);
+      existing = checkStmt.get(insurance.patient_id, insurance.member_id);
+    } else {
+      // Get primary insurance
+      const checkStmt = db.prepare(`
+        SELECT * FROM patient_insurance
+        WHERE patient_id = ? AND is_primary = 1
+        ORDER BY created_at DESC
+        LIMIT 1
+      `);
+      existing = checkStmt.get(insurance.patient_id);
+    }
 
     if (existing) {
       // Update existing
@@ -2354,8 +2422,8 @@ module.exports = {
       const stmt = db.prepare(`
         INSERT INTO patient_insurance (
           id, patient_id, payer_id, payer_name, member_id,
-          group_number, plan_name, relationship_code, is_primary
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          group_number, plan_name, relationship_code, is_primary, is_verified, verified_at, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       `);
       return stmt.run(
         insurance.id,
@@ -2366,7 +2434,9 @@ module.exports = {
         insurance.group_number || null,
         insurance.plan_name || null,
         insurance.relationship_code || 'self',
-        insurance.is_primary !== undefined ? (insurance.is_primary ? 1 : 0) : 1
+        insurance.is_primary !== undefined ? (insurance.is_primary ? 1 : 0) : 1,
+        insurance.is_verified !== undefined ? (insurance.is_verified ? 1 : 0) : 0,
+        insurance.verified_at || null
       );
     }
   },

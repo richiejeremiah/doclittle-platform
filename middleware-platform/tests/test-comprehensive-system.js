@@ -560,18 +560,7 @@ async function runAllTests() {
   log(`Testing against: ${BASE_URL}`, 'blue');
   log(`Test started at: ${new Date().toISOString()}\n`, 'blue');
 
-  // Clear test data first to ensure clean slate
-  log('🧹 Clearing test data...', 'yellow');
-  try {
-    const clearResult = await apiCall('POST', '/dev/clear-test-data');
-    if (clearResult.success && clearResult.data.success) {
-      log('✅ Test data cleared', 'green');
-    } else {
-      log('⚠️  Could not clear test data (continuing anyway)', 'yellow');
-    }
-  } catch (e) {
-    log('⚠️  Could not clear test data (continuing anyway)', 'yellow');
-  }
+  // Note: Test data clearing endpoint removed for production
 
   // Test Suite 1: Appointment Booking
   log('\n📋 TEST SUITE 1: Appointment Booking', 'magenta');
