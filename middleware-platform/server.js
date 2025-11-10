@@ -245,7 +245,7 @@ app.post('/voice/incoming', voiceLimiter, async (req, res) => {
           'Authorization': `Bearer ${process.env.RETELL_API_KEY}`,
           'Content-Type': 'application/json'
         },
-        timeout: 8000
+        timeout: 5000 // Reduced from 8000 to 5000ms for faster response
       }
     );
 
