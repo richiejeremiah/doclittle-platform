@@ -3455,20 +3455,21 @@ app.post('/api/patient/wallet/deposit', async (req, res) => {
               if (CircleService && CircleService.isAvailable()) {
                 const fundResult = await CircleService.fundWallet(account.circle_wallet_id, amount);
 
-              if (fundResult.success) {
-                // Update transfer status to completed
-                db.db.prepare(`
-                  UPDATE circle_transfers 
-                  SET status = ?, completed_at = ?, circle_transfer_id = ?
-                  WHERE id = ?
-                `).run(
-                  'completed',
-                  new Date().toISOString(),
-                  fundResult.transferId || paymentIntent.id,
-                  depositId
-                );
+                if (fundResult.success) {
+                  // Update transfer status to completed
+                  db.db.prepare(`
+                    UPDATE circle_transfers 
+                    SET status = ?, completed_at = ?, circle_transfer_id = ?
+                    WHERE id = ?
+                  `).run(
+                    'completed',
+                    new Date().toISOString(),
+                    fundResult.transferId || paymentIntent.id,
+                    depositId
+                  );
 
-                console.log(`✅ Wallet funded immediately: ${fundResult.transferId}`);
+                  console.log(`✅ Wallet funded immediately: ${fundResult.transferId}`);
+                }
               }
             } catch (fundError) {
               console.warn(`⚠️  Immediate wallet funding failed, webhook will handle: ${fundError.message}`);
