@@ -219,7 +219,8 @@ app.post('/voice/incoming', voiceLimiter, async (req, res) => {
     console.log('To:', req.body.To);
     console.log('CallSid:', req.body.CallSid);
 
-    // Register call with Retell for custom telephony
+    // CRITICAL: Register call with Retell FIRST (before responding)
+    // But use a shorter timeout and handle errors gracefully
     const registerPayload = {
       agent_id: process.env.RETELL_AGENT_ID || 'agent_9151f738c705a56f4a0d8df63a',
       audio_websocket_protocol: 'twilio',
@@ -237,28 +238,42 @@ app.post('/voice/incoming', voiceLimiter, async (req, res) => {
 
     console.log('📡 Registering call with Retell...');
 
-    const retellRegisterResp = await axios.post(
-      'https://api.retellai.com/v2/register-phone-call',
-      registerPayload,
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.RETELL_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 5000 // Reduced from 8000 to 5000ms for faster response
-      }
-    );
+    let callId = null;
+    let sipUri = null;
 
-    console.log('📊 Retell Register Response:', JSON.stringify(retellRegisterResp.data, null, 2));
+    try {
+      const retellRegisterResp = await axios.post(
+        'https://api.retellai.com/v2/register-phone-call',
+        registerPayload,
+        {
+          headers: {
+            'Authorization': `Bearer ${process.env.RETELL_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 3000 // Very short timeout - 3 seconds max
+        }
+      );
 
-    const callId = retellRegisterResp.data.call_id;
-    console.log('✅ Call registered! Call ID:', callId);
+      console.log('📊 Retell Register Response:', JSON.stringify(retellRegisterResp.data, null, 2));
 
-    // Build SIP URI using the call_id (as per Retell docs)
-    const sipUri = `sip:${callId}@5t4n6j0wnrl.sip.livekit.cloud`;
-    console.log('📞 Dialing to Retell SIP endpoint:', sipUri);
+      callId = retellRegisterResp.data.call_id;
+      console.log('✅ Call registered! Call ID:', callId);
 
-    // Return TwiML immediately to avoid timeout
+      // Build SIP URI using the call_id (as per Retell docs)
+      sipUri = `sip:${callId}@5t4n6j0wnrl.sip.livekit.cloud`;
+      console.log('📞 Dialing to Retell SIP endpoint:', sipUri);
+    } catch (retellError) {
+      console.error('❌ Retell registration failed:', retellError.message);
+      // If Retell fails, return error TwiML immediately
+      const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Joanna">Sorry, we're experiencing technical difficulties. Please try again in a moment.</Say>
+  <Hangup/>
+</Response>`;
+      return res.type('text/xml').send(errorTwiml);
+    }
+
+    // Return TwiML IMMEDIATELY after Retell registration
     // Twilio requires response within 10-15 seconds
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
