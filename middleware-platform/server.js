@@ -37,13 +37,16 @@ const EHRSyncService = require('./services/ehr-sync-service');
 const EpicAdapter = require('./services/epic-adapter');
 
 // CircleService - make it optional (don't crash if CIRCLE_API_KEY is not set)
+// CircleService exports a singleton instance, so we can use it directly
 let CircleService;
 try {
   CircleService = require('./services/circle-service');
-  // Try to instantiate to check if it's configured
-  const circleServiceInstance = new CircleService();
-  if (!circleServiceInstance.isAvailable()) {
+  // Check if the service is available (has API key and is configured)
+  if (!CircleService.isAvailable()) {
     console.warn('⚠️  Circle service is not fully configured. Wallet features will be limited.');
+    console.warn('   Set CIRCLE_API_KEY and CIRCLE_ENTITY_SECRET to enable Circle wallets.');
+  } else {
+    console.log('✅ Circle service initialized and available');
   }
 } catch (error) {
   console.warn('⚠️  Circle service not available:', error.message);
@@ -572,9 +575,8 @@ app.post('/voice/checkout/verify', async (req, res) => {
         fhirPatient = db.getFHIRPatientByPhone(checkout.customer_phone);
       }
 
-      if (fhirPatient) {
+      if (fhirPatient && CircleService && CircleService.isAvailable()) {
         // Get patient wallet
-        const CircleService = require('./services/circle-service');
         const walletResult = await CircleService.getOrCreatePatientWallet(fhirPatient.resource_id, {
           createIfNotExists: false // Don't create wallet if it doesn't exist
         });
@@ -1162,8 +1164,15 @@ app.post('/process-payment', paymentLimiter, async (req, res) => {
           });
         }
 
+        // Check if CircleService is available
+        if (!CircleService || !CircleService.isAvailable()) {
+          return res.status(503).json({
+            success: false,
+            error: 'Wallet payment is not available. Circle service is not configured. Please use a card payment instead.'
+          });
+        }
+
         // Get patient wallet
-        const CircleService = require('./services/circle-service');
         const walletResult = await CircleService.getOrCreatePatientWallet(fhirPatient.resource_id, {
           createIfNotExists: false
         });
@@ -2899,10 +2908,10 @@ app.post('/api/circle/wallets', async (req, res) => {
     }
 
     // Check if SDK is available
-    if (!CircleService.isAvailable()) {
+    if (!CircleService || !CircleService.isAvailable()) {
       return res.status(500).json({
         success: false,
-        error: 'Circle SDK not configured. Please set CIRCLE_ENTITY_SECRET in .env file.'
+        error: 'Circle SDK not configured. Please set CIRCLE_API_KEY and CIRCLE_ENTITY_SECRET in environment variables.'
       });
     }
 
@@ -3094,7 +3103,13 @@ app.post('/api/patient/wallet/deposit', async (req, res) => {
       }
 
       // Get or create wallet using FHIR Patient resource_id
-      const CircleService = require('./services/circle-service');
+      if (!CircleService || !CircleService.isAvailable()) {
+        return res.status(503).json({
+          success: false,
+          error: 'Circle service is not configured. Please set CIRCLE_API_KEY and CIRCLE_ENTITY_SECRET in environment variables.'
+        });
+      }
+
       const walletResult = await CircleService.getOrCreatePatientWallet(fhirPatientId, {
         createIfNotExists: true
       });
@@ -3129,7 +3144,37 @@ app.post('/api/patient/wallet/deposit', async (req, res) => {
     if (method === 'test') {
       // For test/sandbox: Use Circle SDK to transfer test USDC from system wallet
       try {
-        const CircleService = require('./services/circle-service');
+        if (!CircleService || !CircleService.isAvailable()) {
+          // Fallback: Create pending record if Circle not configured
+          console.warn('⚠️  Circle service not available - creating pending deposit record');
+          db.db.prepare(`
+            INSERT INTO circle_transfers (
+              id, claim_id, from_wallet_id, to_wallet_id, amount, currency,
+              circle_transfer_id, status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(
+            depositId,
+            null,
+            'system',
+            account.circle_wallet_id,
+            amount,
+            'USDC',
+            `deposit_${Date.now()}`,
+            'pending',
+            new Date().toISOString()
+          );
+
+          return res.json({
+            success: true,
+            depositId: depositId,
+            amount: amount,
+            walletId: account.circle_wallet_id,
+            method: 'test',
+            status: 'pending',
+            message: `Deposit record created. Circle service is not configured - please set CIRCLE_API_KEY and CIRCLE_ENTITY_SECRET.`,
+            note: 'To enable real test USDC transfers, configure Circle API keys in environment variables.'
+          });
+        }
 
         // Attempt to fund wallet via Circle API
         const fundResult = await CircleService.fundWallet(account.circle_wallet_id, amount);
@@ -3407,8 +3452,8 @@ app.post('/api/patient/wallet/deposit', async (req, res) => {
 
             // Attempt to fund wallet immediately (webhook will also handle this as backup)
             try {
-              const CircleService = require('./services/circle-service');
-              const fundResult = await CircleService.fundWallet(account.circle_wallet_id, amount);
+              if (CircleService && CircleService.isAvailable()) {
+                const fundResult = await CircleService.fundWallet(account.circle_wallet_id, amount);
 
               if (fundResult.success) {
                 // Update transfer status to completed
